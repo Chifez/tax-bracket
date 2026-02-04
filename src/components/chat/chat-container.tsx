@@ -1,12 +1,12 @@
 import { useRef, useEffect } from 'react'
 import { useMessages, useChatStore } from '@/stores/chat-store'
 import { ScrollArea } from '@/components/ui'
-import { MessageBubble } from './message-bubble'
-import { DocumentResponse } from './document-response'
-import { ChatInput } from './chat-input'
-import { EmptyState } from './empty-state'
 import { ThinkingAnimation } from './thinking-animation'
 import { cn } from '@/lib/utils'
+import { ChatInput } from './chat-input'
+import { DocumentResponse } from './document-response'
+import { EmptyState } from './empty-state'
+import { MessageBubble } from './message-bubble'
 
 interface ChatContainerProps {
     className?: string

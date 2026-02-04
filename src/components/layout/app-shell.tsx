@@ -1,6 +1,6 @@
 import { Sidebar } from './sidebar'
 import { useChatStore } from '@/stores/chat-store'
-import { Button, Tooltip } from '@/components/ui'
+import { Button } from '@/components/ui'
 import { PanelLeft, PanelLeftClose } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
