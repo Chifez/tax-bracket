@@ -18,7 +18,7 @@ export function AppShell({ children, className }: AppShellProps) {
     const isMobile = useIsMobile()
 
     return (
-        <div className={cn('flex h-screen overflow-hidden', className)}>
+        <div className={cn('flex h-dvh overflow-hidden', className)}>
             {!isMobile && <Sidebar />}
 
             {isMobile && (

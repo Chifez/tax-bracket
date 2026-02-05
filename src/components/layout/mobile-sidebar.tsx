@@ -38,10 +38,11 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
 
             <aside
                 className={cn(
-                    'fixed inset-y-0 left-0 z-50 w-[70vw] max-w-[300px] bg-card border-r border-border flex flex-col',
+                    'fixed inset-y-0 left-0 z-50 w-[70vw] max-w-[300px] border-r border-border flex flex-col',
                     'transition-transform duration-300 ease-out',
                     isOpen ? 'translate-x-0' : '-translate-x-full'
                 )}
+                style={{ backgroundColor: 'var(--card)' }}
             >
                 <div className="flex items-center justify-between h-14 px-4 shrink-0">
                     <Logo className="text-lg" />

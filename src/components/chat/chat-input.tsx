@@ -175,7 +175,7 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
                     onKeyDown={handleKeyDown}
                     placeholder={disabled ? 'Start a new chat...' : 'Ask a question...'}
                     disabled={disabled}
-                    className="flex-1 min-h-[36px] max-h-[160px] border-0 bg-transparent resize-none focus-visible:ring-0 focus-visible:ring-offset-0 py-2 text-[13px]"
+                    className="flex-1 min-h-[36px] max-h-[160px] border-0 bg-transparent resize-none focus-visible:ring-0 focus-visible:ring-offset-0 py-2 text-base md:text-[13px]"
                     rows={1}
                 />
 
