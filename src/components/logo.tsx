@@ -5,10 +5,6 @@ interface LogoProps {
     className?: string
 }
 
-/**
- * TaxBracket Logo - "{TAX}" representing the brand
- * Displays full logo when open, just brackets { } when collapsed
- */
 export function Logo({ collapsed = false, className }: LogoProps) {
     return (
         <div

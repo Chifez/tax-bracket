@@ -1,6 +1,6 @@
 import type { Message } from '@/types'
 import { cn } from '@/lib/utils'
-import { FileText, Image as ImageIcon, File } from 'lucide-react'
+import { FileAttachment } from './file-attachment'
 
 interface MessageBubbleProps {
     message: Message
@@ -49,43 +49,4 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
             </div>
         </div>
     )
-}
-
-interface FileAttachmentProps {
-    name: string
-    type: string
-    size?: number
-}
-
-function FileAttachment({ name, type, size }: FileAttachmentProps) {
-    const isImage = type.startsWith('image/')
-    const isPDF = type.includes('pdf')
-    const isCSV = type.includes('csv') || name.endsWith('.csv')
-
-    const Icon = isImage ? ImageIcon : (isPDF || isCSV) ? FileText : File
-    const bgColor = isPDF ? 'bg-red-500/10' : isCSV ? 'bg-green-500/10' : isImage ? 'bg-blue-500/10' : 'bg-muted'
-    const iconColor = isPDF ? 'text-red-500' : isCSV ? 'text-green-500' : isImage ? 'text-blue-500' : 'text-muted-foreground'
-
-    return (
-        <div className={cn(
-            'flex items-center gap-2 rounded-lg px-3 py-2',
-            bgColor
-        )}>
-            <Icon size={16} className={iconColor} />
-            <div className="text-left">
-                <p className="text-xs font-medium truncate max-w-[150px]">{name}</p>
-                {size && (
-                    <p className="text-[10px] text-muted-foreground">
-                        {formatFileSize(size)}
-                    </p>
-                )}
-            </div>
-        </div>
-    )
-}
-
-function formatFileSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }

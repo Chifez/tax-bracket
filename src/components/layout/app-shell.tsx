@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Sidebar } from './sidebar'
 import { MobileSidebar } from './mobile-sidebar'
 import { useChatStore } from '@/stores/chat-store'
+import { useIsMobile } from '@/hooks'
 import { Button } from '@/components/ui'
 import { PanelLeft, PanelLeftClose, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -11,26 +12,6 @@ interface AppShellProps {
     className?: string
 }
 
-// Hook to detect mobile screen
-function useIsMobile(breakpoint = 768) {
-    const [isMobile, setIsMobile] = useState(false)
-
-    useEffect(() => {
-        const checkMobile = () => {
-            setIsMobile(window.innerWidth < breakpoint)
-        }
-
-        // Check on mount
-        checkMobile()
-
-        // Listen for resize
-        window.addEventListener('resize', checkMobile)
-        return () => window.removeEventListener('resize', checkMobile)
-    }, [breakpoint])
-
-    return isMobile
-}
-
 export function AppShell({ children, className }: AppShellProps) {
     const { isSidebarOpen, toggleSidebar } = useChatStore()
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -38,10 +19,8 @@ export function AppShell({ children, className }: AppShellProps) {
 
     return (
         <div className={cn('flex h-screen overflow-hidden', className)}>
-            {/* Desktop Sidebar */}
             {!isMobile && <Sidebar />}
 
-            {/* Mobile Sidebar (Drawer) */}
             {isMobile && (
                 <MobileSidebar
                     isOpen={mobileMenuOpen}
@@ -49,10 +28,8 @@ export function AppShell({ children, className }: AppShellProps) {
                 />
             )}
 
-            {/* Toggle Button */}
             <div className="relative">
                 {isMobile ? (
-                    // Mobile: Hamburger menu button
                     <Button
                         variant="ghost"
                         size="icon"
@@ -62,7 +39,6 @@ export function AppShell({ children, className }: AppShellProps) {
                         <Menu size={18} />
                     </Button>
                 ) : (
-                    // Desktop: Panel toggle button
                     <Button
                         variant="ghost"
                         size="icon"
@@ -78,7 +54,6 @@ export function AppShell({ children, className }: AppShellProps) {
                 )}
             </div>
 
-            {/* Main Content */}
             <main className="flex-1 overflow-hidden">
                 {children}
             </main>

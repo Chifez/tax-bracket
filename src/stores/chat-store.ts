@@ -33,7 +33,7 @@ interface ChatState {
     setThinking: (thinking: boolean) => void
 }
 
-export const useChatStore = create<ChatState>()((set, get) => ({
+export const useChatStore = create<ChatState>()((set, _get) => ({
     // Initial state
     chats: [],
     activeChat: null,

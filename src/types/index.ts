@@ -52,7 +52,7 @@ export interface ChartData {
     title: string
     description?: string
     dateRange?: string
-    data: Array<{ label: string; value: number;[key: string]: unknown }>
+    data: Array<{ label: string; value?: number;[key: string]: unknown }>
     xKey?: string
     yKeys?: string[]
     colors?: string[]

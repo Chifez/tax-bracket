@@ -1,27 +1,24 @@
+import { memo } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import type { ChartData } from '@/types'
 import { Card } from '@/components/ui'
 import { cn } from '@/lib/utils'
+import { formatValue, formatSeriesName } from '@/lib/format'
 
 interface FinancialChartProps {
     chart: ChartData
     className?: string
 }
 
-// Color palette for multi-series charts
 const CHART_COLORS = [
-    'var(--primary)',           // Emerald
-    '#f59e0b',                  // Amber
-    '#3b82f6',                  // Blue
-    '#ef4444',                  // Red
-    '#8b5cf6',                  // Purple
+    'var(--primary)',
+    '#f59e0b',
+    '#3b82f6',
+    '#ef4444',
+    '#8b5cf6',
 ]
 
-/**
- * Financial chart component using Recharts
- * Supports line, bar, and multi-line charts with proper theming
- */
-export function FinancialChart({ chart, className }: FinancialChartProps) {
+export const FinancialChart = memo(function FinancialChart({ chart, className }: FinancialChartProps) {
     const chartType = chart.type || 'line'
     const isMultiLine = chartType === 'multi-line'
     const seriesKeys = chart.yKeys || ['value']
@@ -29,7 +26,6 @@ export function FinancialChart({ chart, className }: FinancialChartProps) {
 
     return (
         <Card className={cn('overflow-hidden mx-2 py-2', className)}>
-            {/* Header */}
             <div className="p-4 pb-3 border-b bg-muted/30">
                 <div className="flex items-start justify-between">
                     <div>
@@ -45,7 +41,6 @@ export function FinancialChart({ chart, className }: FinancialChartProps) {
                     </div>
                 </div>
 
-                {/* Chart metadata pills */}
                 <div className="flex gap-2 mt-3">
                     <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded">
                         {seriesCount} Series
@@ -61,7 +56,6 @@ export function FinancialChart({ chart, className }: FinancialChartProps) {
                 </div>
             </div>
 
-            {/* Chart Area */}
             <div className="h-56 p-4">
                 <ResponsiveContainer width="100%" height="100%">
                     {chartType === 'bar' ? (
@@ -86,7 +80,7 @@ export function FinancialChart({ chart, className }: FinancialChartProps) {
                                     borderRadius: '8px',
                                     fontSize: '12px'
                                 }}
-                                formatter={(value: number) => [formatValue(value), 'Value']}
+                                formatter={(value) => [formatValue(value as number), 'Value']}
                             />
                             <Bar
                                 dataKey="value"
@@ -117,7 +111,7 @@ export function FinancialChart({ chart, className }: FinancialChartProps) {
                                     borderRadius: '8px',
                                     fontSize: '12px'
                                 }}
-                                formatter={(value: number, name: string) => [formatValue(value), formatSeriesName(name)]}
+                                formatter={(value, name) => [formatValue((value as number) ?? 0), formatSeriesName(name as string)]}
                             />
                             <Legend
                                 wrapperStyle={{ fontSize: '11px' }}
@@ -158,7 +152,7 @@ export function FinancialChart({ chart, className }: FinancialChartProps) {
                                     borderRadius: '8px',
                                     fontSize: '12px'
                                 }}
-                                formatter={(value: number) => [formatValue(value), 'Value']}
+                                formatter={(value) => [formatValue(value as number), 'Value']}
                             />
                             <Line
                                 type="monotone"
@@ -174,23 +168,4 @@ export function FinancialChart({ chart, className }: FinancialChartProps) {
             </div>
         </Card>
     )
-}
-
-function formatValue(value: number): string {
-    if (value >= 1000000) {
-        return `₦${(value / 1000000).toFixed(1)}M`
-    }
-    if (value >= 1000) {
-        return `₦${(value / 1000).toFixed(0)}K`
-    }
-    return `₦${value.toLocaleString()}`
-}
-
-function formatSeriesName(name: string): string {
-    // Convert camelCase or snake_case to Title Case
-    return name
-        .replace(/([A-Z])/g, ' $1')
-        .replace(/_/g, ' ')
-        .replace(/^\w/, c => c.toUpperCase())
-        .trim()
-}
+})

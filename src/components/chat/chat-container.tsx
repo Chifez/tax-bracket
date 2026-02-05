@@ -1,12 +1,12 @@
 import { useRef, useEffect } from 'react'
 import { useMessages, useChatStore } from '@/stores/chat-store'
 import { ScrollArea } from '@/components/ui'
-import { ThinkingAnimation } from './thinking-animation'
-import { cn } from '@/lib/utils'
 import { ChatInput } from './chat-input'
 import { DocumentResponse } from './document-response'
 import { EmptyState } from './empty-state'
 import { MessageBubble } from './message-bubble'
+import { ThinkingAnimation } from './thinking-animation'
+import { cn } from '@/lib/utils'
 
 interface ChatContainerProps {
     className?: string
@@ -17,7 +17,6 @@ export function ChatContainer({ className }: ChatContainerProps) {
     const { activeChat, isThinking } = useChatStore()
     const scrollRef = useRef<HTMLDivElement>(null)
 
-    // Auto-scroll to bottom when new messages arrive or thinking state changes
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -28,7 +27,6 @@ export function ChatContainer({ className }: ChatContainerProps) {
 
     return (
         <div className={cn('flex flex-col h-full bg-background', className)}>
-            {/* Messages Area */}
             <ScrollArea
                 ref={scrollRef}
                 className="flex-1 px-4 py-4"
@@ -45,15 +43,12 @@ export function ChatContainer({ className }: ChatContainerProps) {
                                     <DocumentResponse key={message.id} message={message} />
                                 )
                             ))}
-
-                            {/* Thinking Animation */}
                             {isThinking && <ThinkingAnimation />}
                         </>
                     )}
                 </div>
             </ScrollArea>
 
-            {/* Input Area */}
             <div className="border-t border-border bg-background">
                 <div className="max-w-2xl mx-auto px-4 py-3">
                     <ChatInput disabled={!activeChat && messages.length > 0} />
