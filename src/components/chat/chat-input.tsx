@@ -146,7 +146,7 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
                                 className="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted rounded-md"
                             >
                                 <FileText size={14} />
-                                <span>Bank Statement (PDF/CSV)</span>
+                                <span>File (PDF/CSV)</span>
                             </button>
                             <button
                                 onClick={() => openFileDialog('image/*')}

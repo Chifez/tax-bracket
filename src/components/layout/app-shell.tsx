@@ -60,7 +60,7 @@ export function AppShell({ children, className }: AppShellProps) {
                                 variant="ghost"
                                 size="icon"
                                 onClick={toggleSidebar}
-                                className="absolute top-4 left-6 h-6 w-6 bg-card text-muted-foreground hover:text-foreground z-10 pointer-events-auto"
+                                className="absolute top-4 left-6 h-6 w-6 text-muted-foreground hover:text-foreground z-10 pointer-events-auto"
                             >
                                 {isSidebarOpen ? (
                                     <PanelLeftClose size={16} />

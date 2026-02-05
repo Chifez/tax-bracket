@@ -43,6 +43,41 @@
   --color-error: #ef4444;
   --color-info: #3b82f6;
 
+  /* Theme Color Mappings */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Sidebar Colors */
+  --color-sidebar: var(--sidebar-bg);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-icon: var(--sidebar-icon);
+  --color-sidebar-icon-active: var(--sidebar-icon-active);
+
   /* Border radius */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
@@ -60,32 +95,32 @@
   /* Light mode (default) */
   --background: var(--color-neutral-50);
   --foreground: var(--color-neutral-900);
-  
+
   --card: #ffffff;
   --card-foreground: var(--color-neutral-900);
-  
+
   --popover: #ffffff;
   --popover-foreground: var(--color-neutral-900);
-  
+
   --primary: var(--color-primary-600);
   --primary-foreground: #ffffff;
-  
+
   --secondary: var(--color-neutral-100);
   --secondary-foreground: var(--color-neutral-900);
-  
+
   --muted: var(--color-neutral-100);
   --muted-foreground: var(--color-neutral-500);
-  
+
   --accent: var(--color-neutral-100);
   --accent-foreground: var(--color-neutral-900);
-  
+
   --destructive: var(--color-error);
   --destructive-foreground: #ffffff;
-  
+
   --border: var(--color-neutral-200);
   --input: var(--color-neutral-200);
   --ring: var(--color-primary-500);
-  
+
   /* Sidebar specific */
   --sidebar-bg: #ffffff;
   --sidebar-border: var(--color-neutral-200);
@@ -96,32 +131,32 @@
 .dark {
   --background: var(--color-neutral-950);
   --foreground: var(--color-neutral-50);
-  
+
   --card: var(--color-neutral-900);
   --card-foreground: var(--color-neutral-50);
-  
+
   --popover: var(--color-neutral-900);
   --popover-foreground: var(--color-neutral-50);
-  
+
   --primary: var(--color-primary-500);
   --primary-foreground: var(--color-neutral-950);
-  
+
   --secondary: var(--color-neutral-800);
   --secondary-foreground: var(--color-neutral-50);
-  
+
   --muted: var(--color-neutral-800);
   --muted-foreground: var(--color-neutral-400);
-  
+
   --accent: var(--color-neutral-800);
   --accent-foreground: var(--color-neutral-50);
-  
+
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  
+
   --border: var(--color-neutral-800);
   --input: var(--color-neutral-800);
   --ring: var(--color-primary-400);
-  
+
   /* Sidebar specific */
   --sidebar-bg: var(--color-neutral-900);
   --sidebar-border: var(--color-neutral-800);

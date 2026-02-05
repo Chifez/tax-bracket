@@ -67,7 +67,7 @@ export function EmptyState() {
         <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
             {/* Logo */}
             <div className="mb-6">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3 mx-auto">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 mx-auto">
                     <Logo className="text-xl" />
                 </div>
                 <h1 className="text-xl font-semibold text-foreground mb-1">
