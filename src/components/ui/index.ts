@@ -6,3 +6,16 @@ export { Avatar, AvatarImage, AvatarFallback } from './avatar'
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './card'
 export { Tooltip } from './tooltip'
 export { Separator } from './separator'
+export { Input } from './input'
+export {
+    Dialog,
+    DialogPortal,
+    DialogOverlay,
+    DialogClose,
+    DialogTrigger,
+    DialogContent,
+    DialogHeader,
+    DialogFooter,
+    DialogTitle,
+    DialogDescription,
+} from './dialog'

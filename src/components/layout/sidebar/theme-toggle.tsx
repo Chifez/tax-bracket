@@ -36,7 +36,7 @@ export const ThemeToggle = memo(function ThemeToggle({ showLabel = false, classN
             )}
         >
             <ThemeIcon size={16} className="shrink-0" />
-            {showLabel && <span className="text-sm">{themeLabel}</span>}
+            {showLabel && <span className="text-xs font-normal">{themeLabel}</span>}
         </Button>
     )
 })
