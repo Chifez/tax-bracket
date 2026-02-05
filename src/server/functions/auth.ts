@@ -1,12 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
 import { setCookie, deleteCookie, getCookie } from 'vinxi/http'
-import { z } from 'zod'
 import { db } from '@/db'
 import { users, passwordResetTokens } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { hashPassword, verifyPassword, validatePassword } from '@/server/lib/password'
 import { createSession, revokeSession } from '@/server/lib/session'
-import { requireAuth, getAuthenticatedUser } from '@/server/middleware/auth'
+import { getAuthenticatedUser } from '@/server/middleware/auth'
 import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@/server/validators/auth'
 
 /**
