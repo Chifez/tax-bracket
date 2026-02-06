@@ -1,10 +1,11 @@
 import { useCallback } from 'react'
 import { useChatStore } from '@/stores/chat-store'
 import { Logo } from '@/components/logo'
-import { Button, Separator, Avatar, AvatarFallback, ScrollArea } from '@/components/ui'
+import { Button, Separator, Avatar, AvatarFallback, AvatarImage, ScrollArea } from '@/components/ui'
 import { cn } from '@/lib/utils'
-import { Settings, MessageSquare, X } from 'lucide-react'
+import { Settings, MessageSquare, X, LogOut } from 'lucide-react'
 import { navItems, type NavItem, ThemeToggle } from './sidebar/index'
+import { useUser, useLogout } from '@/hooks/use-auth'
 
 interface MobileSidebarProps {
     isOpen: boolean
@@ -13,6 +14,9 @@ interface MobileSidebarProps {
 
 export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     const { chats, activeChat, setActiveChat, createChat } = useChatStore()
+    const { data } = useUser()
+    const { mutate: logout } = useLogout()
+    const user = data?.user
 
     const handleNavClick = useCallback((item: NavItem) => {
         if ('action' in item && item.action === 'newChat') {
@@ -120,15 +124,24 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                         <span>Settings</span>
                     </button>
 
+                    <button
+                        onClick={() => logout()}
+                        className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-sm"
+                    >
+                        <LogOut size={18} strokeWidth={1.5} className="shrink-0" />
+                        <span>Logout</span>
+                    </button>
+
                     <button className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 hover:bg-muted transition-colors">
-                        <Avatar className="h-8 w-8 ring-2 ring-amber-400/50 shrink-0">
-                            <AvatarFallback className="text-xs bg-gradient-to-br from-amber-100 to-orange-200 text-amber-800">
-                                U
+                        <Avatar className="h-8 w-8 ring-2 ring-primary/20 shrink-0">
+                            <AvatarImage src={undefined} />
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                                {user?.name?.slice(0, 2).toUpperCase() || 'U'}
                             </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 text-left">
-                            <p className="text-sm font-medium truncate">User</p>
-                            <p className="text-xs text-muted-foreground truncate">Free Plan</p>
+                        <div className="flex-1 text-left overflow-hidden">
+                            <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
+                            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                         </div>
                     </button>
                 </div>

@@ -102,7 +102,7 @@ export async function getSessionByToken(token: string) {
 export function useAppSession() {
     return useSession<{ token: string }>({
         name: 'session_token',
-        password: process.env.SESSION_SECRET ?? 'very-long-secret-password-that-is-at-least-32-chars',
+        password: process.env.SESSION_SECRET!,
         cookie: {
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',

@@ -3,7 +3,7 @@ import { Sidebar } from './sidebar'
 import { MobileSidebar } from './mobile-sidebar'
 import { useChatStore } from '@/stores/chat-store'
 import { useIsMobile } from '@/hooks'
-import { Button, Avatar, AvatarFallback } from '@/components/ui'
+import { Button, Avatar, AvatarFallback, AvatarImage } from '@/components/ui'
 import { PanelLeft, PanelLeftClose, Menu, LogIn } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AuthModal } from '@/components/auth/auth-modal'
@@ -82,6 +82,7 @@ export function AppShell({ children, className }: AppShellProps) {
                                 }}
                             >
                                 <Avatar className="h-8 w-8">
+                                    {user?.image && <AvatarImage src={user.image} key={user.image} />}
                                     <AvatarFallback className="bg-primary/10 text-primary text-xs">
                                         {user.name?.slice(0, 2).toUpperCase() || 'U'}
                                     </AvatarFallback>
