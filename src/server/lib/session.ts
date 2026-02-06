@@ -3,6 +3,7 @@ import { db } from '@/db'
 import { sessions, users } from '@/db/schema'
 import { eq, and, isNull, gt } from 'drizzle-orm'
 import type { User } from '@/db/schema'
+import { useSession } from '@tanstack/react-start/server'
 
 const SESSION_DURATION_DAYS = 30
 
@@ -91,5 +92,21 @@ export async function getSessionByToken(token: string) {
             isNull(sessions.revokedAt),
             gt(sessions.expiresAt, new Date())
         )
+    })
+}
+
+/**
+ * App Session Hook
+ * Manages the HTTP-only cookie for the session token
+ */
+export function useAppSession() {
+    return useSession<{ token: string }>({
+        name: 'session_token',
+        password: process.env.SESSION_SECRET ?? 'very-long-secret-password-that-is-at-least-32-chars',
+        cookie: {
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            httpOnly: true,
+        },
     })
 }

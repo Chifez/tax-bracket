@@ -1,10 +1,10 @@
+
 import { createServerFn } from '@tanstack/react-start'
-import { setCookie, deleteCookie, getCookie } from 'vinxi/http'
 import { db } from '@/db'
 import { users, passwordResetTokens } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { hashPassword, verifyPassword, validatePassword } from '@/server/lib/password'
-import { createSession, revokeSession } from '@/server/lib/session'
+import { createSession, revokeSession, useAppSession } from '@/server/lib/session'
 import { getAuthenticatedUser } from '@/server/middleware/auth'
 import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@/server/validators/auth'
 import { badRequest, unauthorized } from '@/server/lib/error'
@@ -50,14 +50,9 @@ export const register = createServerFn({ method: "POST" })
         // Create session
         const session = await createSession(newUser.id)
 
-        // Set cookie
-        setCookie('session_token', session.token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            expires: session.expiresAt
-        })
+        // Set session cookie
+        const appSession = await useAppSession()
+        await appSession.update({ token: session.token })
 
         return { user: newUser }
     })
@@ -84,14 +79,9 @@ export const login = createServerFn({ method: "POST" })
         // Create session
         const session = await createSession(user.id)
 
-        // Set cookie
-        setCookie('session_token', session.token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            expires: session.expiresAt
-        })
+        // Set session cookie
+        const appSession = await useAppSession()
+        await appSession.update({ token: session.token })
 
         return { user }
     })
@@ -101,11 +91,14 @@ export const login = createServerFn({ method: "POST" })
  */
 export const logout = createServerFn()
     .handler(async () => {
-        const token = getCookie('session_token')
+        const appSession = await useAppSession()
+        const token = appSession.data.token
+
         if (token) {
             await revokeSession(token)
-            deleteCookie('session_token', { path: '/' })
         }
+
+        await appSession.clear()
         return { success: true }
     })
 
