@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getCookie, setCookie } from 'vinxi/http'
+import { setCookie } from 'vinxi/http'
 import { z } from 'zod'
 import { db } from '@/db'
 import { users } from '@/db/schema'

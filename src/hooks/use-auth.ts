@@ -14,7 +14,7 @@ export const useUser = () => {
 export const useRegister = () => {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: (data: RegisterInput) => register({ data }),
+        mutationFn: (data: RegisterInput | any) => register({ data }),
         onSuccess: (result: { user: any }) => {
             queryClient.setQueryData(['user'], { user: result.user })
         }
@@ -24,7 +24,7 @@ export const useRegister = () => {
 export const useLogin = () => {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: (data: LoginInput) => login({ data }),
+        mutationFn: (data: LoginInput | any) => login({ data }),
         onSuccess: (result: { user: any }) => {
             queryClient.setQueryData(['user'], { user: result.user })
         }
@@ -44,12 +44,12 @@ export const useLogout = () => {
 
 export const useForgotPassword = () => {
     return useMutation({
-        mutationFn: (data: ForgotPasswordInput) => forgotPassword({ data }),
+        mutationFn: (data: ForgotPasswordInput | any) => forgotPassword({ data }),
     })
 }
 
 export const useResetPassword = () => {
     return useMutation({
-        mutationFn: (data: ResetPasswordInput) => resetPassword({ data }),
+        mutationFn: (data: ResetPasswordInput | any) => resetPassword({ data }),
     })
 }

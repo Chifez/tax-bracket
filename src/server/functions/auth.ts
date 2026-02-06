@@ -7,6 +7,7 @@ import { hashPassword, verifyPassword, validatePassword } from '@/server/lib/pas
 import { createSession, revokeSession } from '@/server/lib/session'
 import { getAuthenticatedUser } from '@/server/middleware/auth'
 import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@/server/validators/auth'
+import { badRequest, unauthorized } from '@/server/lib/error'
 
 /**
  * Get current user
@@ -20,32 +21,30 @@ export const getMe = createServerFn()
 /**
  * Register a new user
  */
-export const register = createServerFn()
-    .handler(async (data: unknown) => {
-        // Validate with zod
-        const validatedData = registerSchema.parse(data)
-
+export const register = createServerFn({ method: "POST" })
+    .inputValidator((data: unknown) => registerSchema.parse(data))
+    .handler(async ({ data }) => {
         // Validate password strength
-        const strength = validatePassword(validatedData.password)
+        const strength = validatePassword(data.password)
         if (!strength.valid) {
-            throw new Error(strength.error)
+            throw badRequest(strength.error || 'weak password')
         }
 
         // Check if email already exists
         const existingUser = await db.query.users.findFirst({
-            where: eq(users.email, validatedData.email)
+            where: eq(users.email, data.email)
         })
 
         if (existingUser) {
-            throw new Error('Email already registered')
+            throw badRequest('Email already registered')
         }
 
         // Create user
-        const passwordHash = await hashPassword(validatedData.password)
+        const passwordHash = await hashPassword(data.password)
         const [newUser] = await db.insert(users).values({
-            email: validatedData.email,
+            email: data.email,
             passwordHash,
-            name: validatedData.name,
+            name: data.name,
         }).returning()
 
         // Create session
@@ -66,21 +65,20 @@ export const register = createServerFn()
 /**
  * Login
  */
-export const login = createServerFn()
-    .handler(async (data: unknown) => {
-        const validatedData = loginSchema.parse(data)
-
+export const login = createServerFn({ method: "POST" })
+    .inputValidator((data: unknown) => loginSchema.parse(data))
+    .handler(async ({ data }) => {
         const user = await db.query.users.findFirst({
-            where: eq(users.email, validatedData.email)
+            where: eq(users.email, data.email)
         })
 
         if (!user || !user.passwordHash) {
-            throw new Error('Invalid email or password')
+            throw unauthorized('Invalid email or password')
         }
 
-        const isValid = await verifyPassword(validatedData.password, user.passwordHash)
+        const isValid = await verifyPassword(data.password, user.passwordHash)
         if (!isValid) {
-            throw new Error('Invalid email or password')
+            throw unauthorized('Invalid email or password')
         }
 
         // Create session
@@ -114,12 +112,11 @@ export const logout = createServerFn()
 /**
  * Forgot Password
  */
-export const forgotPassword = createServerFn()
-    .handler(async (data: unknown) => {
-        const validatedData = forgotPasswordSchema.parse(data)
-
+export const forgotPassword = createServerFn({ method: "POST" })
+    .inputValidator((data: unknown) => forgotPasswordSchema.parse(data))
+    .handler(async ({ data }) => {
         const user = await db.query.users.findFirst({
-            where: eq(users.email, validatedData.email)
+            where: eq(users.email, data.email)
         })
 
         if (!user) {
@@ -149,20 +146,19 @@ export const forgotPassword = createServerFn()
 /**
  * Reset Password
  */
-export const resetPassword = createServerFn()
-    .handler(async (data: unknown) => {
-        const validatedData = resetPasswordSchema.parse(data)
-
+export const resetPassword = createServerFn({ method: "POST" })
+    .inputValidator((data: unknown) => resetPasswordSchema.parse(data))
+    .handler(async ({ data }) => {
         const resetToken = await db.query.passwordResetTokens.findFirst({
-            where: eq(passwordResetTokens.token, validatedData.token)
+            where: eq(passwordResetTokens.token, data.token)
         })
 
         if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
-            throw new Error('Invalid or expired reset token')
+            throw badRequest('Invalid or expired reset token')
         }
 
         // Update password
-        const passwordHash = await hashPassword(validatedData.password)
+        const passwordHash = await hashPassword(data.password)
         await db.update(users)
             .set({ passwordHash })
             .where(eq(users.id, resetToken.userId))

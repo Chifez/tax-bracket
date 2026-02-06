@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, redirect } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { handleGoogleCallback } from '@/server/functions/oauth'
 import { useQueryClient } from '@tanstack/react-query'
@@ -27,7 +27,7 @@ function GoogleCallbackPage() {
         }
 
         if (code) {
-            handleGoogleCallback({ data: { code } })
+            handleGoogleCallback({ data: { code } as any })
                 .then((result) => {
                     queryClient.setQueryData(['user'], { user: result.user })
                     navigate({ to: '/' })

@@ -24,6 +24,7 @@ export function RegisterView({ onLoginClick, onSuccess }: RegisterViewProps) {
             setError('Passwords do not match')
             return
         }
+        console.log('formData', formData)
 
         register(formData, {
             onSuccess: () => onSuccess(),
