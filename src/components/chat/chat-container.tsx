@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react'
-import { useMessages, useChatStore } from '@/stores/chat-store'
+import { useChatStore } from '@/stores/chat-store'
+import { useChat } from '@/hooks/use-chat'
 import { ScrollArea } from '@/components/ui'
 import { ChatInput } from './chat-input'
 import { DocumentResponse } from './document-response'
@@ -7,14 +8,16 @@ import { EmptyState } from './empty-state'
 import { MessageBubble } from './message-bubble'
 import { ThinkingAnimation } from './thinking-animation'
 import { cn } from '@/lib/utils'
+import { Chat, Message } from '@/types'
 
 interface ChatContainerProps {
     className?: string
 }
 
 export function ChatContainer({ className }: ChatContainerProps) {
-    const messages = useMessages()
     const { activeChat, isThinking } = useChatStore()
+    const { data: chatData } = useChat(activeChat)
+    const messages = chatData?.chat?.messages ?? []
     const scrollRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -36,7 +39,7 @@ export function ChatContainer({ className }: ChatContainerProps) {
                         <EmptyState />
                     ) : (
                         <>
-                            {messages.map((message) => (
+                            {messages.map((message: Message) => (
                                 message.role === 'user' ? (
                                     <MessageBubble key={message.id} message={message} />
                                 ) : (

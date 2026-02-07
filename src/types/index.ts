@@ -100,9 +100,9 @@ export interface Message {
 export interface Chat {
     id: string
     title: string
-    createdAt: string
-    updatedAt: string
-    messages: Message[]
+    createdAt: string | Date
+    updatedAt: string | Date
+    messages?: Message[]
 }
 
 // ========================================

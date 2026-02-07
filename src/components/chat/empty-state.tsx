@@ -1,5 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useChatStore } from '@/stores/chat-store'
+import { useCreateChat } from '@/hooks/use-chat'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button, Card } from '@/components/ui'
 import { Logo } from '@/components/logo'
 import {
@@ -10,6 +11,7 @@ import {
     ArrowRight,
     Upload,
 } from 'lucide-react'
+import type { Message } from '@/types'
 
 const exampleQuestions = [
     {
@@ -31,42 +33,55 @@ const exampleQuestions = [
 ]
 
 export function EmptyState() {
-    const { createChat, addMessage } = useChatStore()
-
+    const { mutateAsync: createChat } = useCreateChat()
+    const queryClient = useQueryClient()
     const navigate = useNavigate()
 
     const handleQuestionClick = async (question: string) => {
-        const chatId = createChat()
-        addMessage(chatId, {
-            role: 'user',
-            content: question,
-        })
+        try {
+            const { chat } = await createChat(question)
 
-        // Navigate to the new chat
-        await navigate({ to: '/chats/$chatId', params: { chatId } })
+            // Navigate to the new chat
+            await navigate({ to: '/chats/$chatId', params: { chatId: chat.id } })
 
-        // Trigger mock response
-        setTimeout(() => {
-            addMessage(chatId, {
-                role: 'assistant',
-                content: '',
-                responseMode: 'explained',
-                sections: [
-                    {
-                        id: '1',
-                        title: 'Getting started',
-                        icon: 'file-text',
-                        contents: [
-                            { type: 'text', content: 'Upload your bank statements to get detailed financial analysis. I support PDF and CSV formats from Nigerian banks.' },
-                        ],
+            // Trigger mock response
+            setTimeout(() => {
+                const mockResponse: Message = {
+                    id: 'mock-response',
+                    role: 'assistant',
+                    content: '',
+                    responseMode: 'explained',
+                    timestamp: new Date().toISOString(),
+                    sections: [
+                        {
+                            id: '1',
+                            title: 'Getting started',
+                            // icon: 'file-text', // Check if icon uses string or component, type says string?
+                            contents: [
+                                { type: 'text', content: 'Upload your bank statements to get detailed financial analysis. I support PDF and CSV formats from Nigerian banks.' },
+                            ],
+                        },
+                    ],
+                    stats: {
+                        sources: 0,
+                        words: 24,
                     },
-                ],
-                stats: {
-                    sources: 0,
-                    words: 24,
-                },
-            })
-        }, 800)
+                }
+
+                queryClient.setQueryData(['chat', chat.id], (old: any) => {
+                    if (!old?.chat) return old
+                    return {
+                        ...old,
+                        chat: {
+                            ...old.chat,
+                            messages: [...old.chat.messages, mockResponse]
+                        }
+                    }
+                })
+            }, 800)
+        } catch (error) {
+            console.error("Failed to create chat", error)
+        }
     }
 
     return (

@@ -1,11 +1,11 @@
 import { create } from 'zustand'
-import { generateId } from '@/lib/utils'
-import type { Chat, Message, UploadedFile } from '@/types'
+import type { UploadedFile } from '@/types'
 
 interface ChatState {
-    // Data
-    chats: Chat[]
+    // Data - Active Pointer
     activeChat: string | null
+
+    // Data - Uploads (Client side only for now)
     uploadedFiles: UploadedFile[]
 
     // UI State
@@ -13,14 +13,8 @@ interface ChatState {
     isUploading: boolean
     isThinking: boolean
 
-    // Actions - Chat
-    createChat: () => string
+    // Actions
     setActiveChat: (chatId: string | null) => void
-    deleteChat: (chatId: string) => void
-
-    // Actions - Messages
-    addMessage: (chatId: string, message: Omit<Message, 'id' | 'timestamp'>) => void
-    updateMessage: (chatId: string, messageId: string, updates: Partial<Message>) => void
 
     // Actions - Files
     addFile: (file: UploadedFile) => void
@@ -33,88 +27,15 @@ interface ChatState {
     setThinking: (thinking: boolean) => void
 }
 
-export const useChatStore = create<ChatState>()((set, _get) => ({
-    // Initial state
-    chats: [],
+export const useChatStore = create<ChatState>()((set) => ({
     activeChat: null,
     uploadedFiles: [],
     isSidebarOpen: true,
     isUploading: false,
     isThinking: false,
 
-    // Chat actions
-    createChat: () => {
-        const id = generateId()
-        const now = new Date().toISOString()
-        const newChat: Chat = {
-            id,
-            title: 'New Chat',
-            createdAt: now,
-            updatedAt: now,
-            messages: [],
-        }
-        set((state) => ({
-            chats: [newChat, ...state.chats],
-            activeChat: id,
-        }))
-        return id
-    },
-
     setActiveChat: (chatId) => {
         set({ activeChat: chatId })
-    },
-
-    deleteChat: (chatId) => {
-        set((state) => {
-            const newChats = state.chats.filter((c) => c.id !== chatId)
-            const newActiveChat = state.activeChat === chatId
-                ? (newChats[0]?.id ?? null)
-                : state.activeChat
-            return { chats: newChats, activeChat: newActiveChat }
-        })
-    },
-
-    // Message actions
-    addMessage: (chatId, message) => {
-        const id = generateId()
-        const timestamp = new Date().toISOString()
-        const fullMessage: Message = { ...message, id, timestamp }
-
-        set((state) => ({
-            chats: state.chats.map((chat) => {
-                if (chat.id !== chatId) return chat
-
-                // Update chat title from first user message
-                const isFirstUserMessage =
-                    message.role === 'user' &&
-                    chat.messages.filter((m) => m.role === 'user').length === 0
-
-                const title = isFirstUserMessage
-                    ? message.content.slice(0, 50) + (message.content.length > 50 ? '...' : '')
-                    : chat.title
-
-                return {
-                    ...chat,
-                    title,
-                    updatedAt: timestamp,
-                    messages: [...chat.messages, fullMessage],
-                }
-            }),
-        }))
-    },
-
-    updateMessage: (chatId, messageId, updates) => {
-        set((state) => ({
-            chats: state.chats.map((chat) => {
-                if (chat.id !== chatId) return chat
-                return {
-                    ...chat,
-                    messages: chat.messages.map((msg) =>
-                        msg.id === messageId ? { ...msg, ...updates } : msg
-                    ),
-                }
-            }),
-        }))
     },
 
     // File actions
@@ -158,14 +79,3 @@ export const useChatStore = create<ChatState>()((set, _get) => ({
         set({ isThinking: thinking })
     },
 }))
-
-// Selector hooks for better performance
-export const useActiveChat = () => {
-    const { chats, activeChat } = useChatStore()
-    return chats.find((c) => c.id === activeChat) ?? null
-}
-
-export const useMessages = () => {
-    const chat = useActiveChat()
-    return chat?.messages ?? []
-}

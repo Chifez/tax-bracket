@@ -12,11 +12,19 @@ import { useUser, useLogout } from '@/hooks/use-auth'
 interface SidebarProps {
     className?: string
     onNavAction?: (action: string) => void
-    onSettingsClick?: () => void
+
 }
 
-export function Sidebar({ className, onNavAction, onSettingsClick }: SidebarProps) {
-    const { isSidebarOpen, chats, activeChat, setActiveChat, createChat } = useChatStore()
+import { useChats, useCreateChat } from '@/hooks/use-chat'
+
+// ...
+
+export function Sidebar({ className, onNavAction }: SidebarProps) {
+    const { isSidebarOpen, activeChat, setActiveChat } = useChatStore()
+    const { mutate: createChat } = useCreateChat()
+    const { data: chatsData } = useChats()
+    const chats = chatsData?.chats ?? []
+
     const { data } = useUser()
     const { mutate: logout } = useLogout()
     const navigate = useNavigate()
@@ -24,7 +32,7 @@ export function Sidebar({ className, onNavAction, onSettingsClick }: SidebarProp
 
     const handleNavClick = useCallback((item: NavItem) => {
         if ('action' in item && item.action === 'newChat') {
-            createChat()
+            createChat(undefined)
             return
         }
 

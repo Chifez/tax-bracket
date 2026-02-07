@@ -10,9 +10,13 @@ interface SearchModalProps {
     onOpenChange: (open: boolean) => void
 }
 
+import { useChats } from '@/hooks/use-chat'
+
 export function SearchModal({ open, onOpenChange }: SearchModalProps) {
     const [query, setQuery] = useState('')
-    const { chats, uploadedFiles } = useChatStore()
+    const { uploadedFiles } = useChatStore()
+    const { data: chatsData } = useChats()
+    const chats = chatsData?.chats ?? []
     const navigate = useNavigate()
 
     // Reset query when closed

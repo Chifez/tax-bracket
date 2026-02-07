@@ -31,18 +31,6 @@ export function AppShell({ children, className }: AppShellProps) {
         setHasMounted(true)
     }, [])
 
-    // Keyboard shortcut for search
-    useEffect(() => {
-        const down = (e: KeyboardEvent) => {
-            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault()
-                setSearchModalOpen((open) => !open)
-            }
-        }
-        document.addEventListener('keydown', down)
-        return () => document.removeEventListener('keydown', down)
-    }, [])
-
     const navigate = useNavigate()
 
     const handleNavAction = useCallback((action: string) => {

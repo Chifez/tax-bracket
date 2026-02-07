@@ -12,11 +12,19 @@ interface MobileSidebarProps {
     isOpen: boolean
     onClose: () => void
     onNavAction?: (action: string) => void
-    onSettingsClick?: () => void
+
 }
 
-export function MobileSidebar({ isOpen, onClose, onNavAction, onSettingsClick }: MobileSidebarProps) {
-    const { chats, activeChat, setActiveChat, createChat } = useChatStore()
+import { useChats, useCreateChat } from '@/hooks/use-chat'
+
+// ...
+
+export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarProps) {
+    const { activeChat, setActiveChat } = useChatStore()
+    const { mutate: createChat } = useCreateChat()
+    const { data: chatsData } = useChats()
+    const chats = chatsData?.chats ?? []
+
     const { data } = useUser()
     const { mutate: logout } = useLogout()
     const user = data?.user
@@ -24,8 +32,13 @@ export function MobileSidebar({ isOpen, onClose, onNavAction, onSettingsClick }:
 
     const handleNavClick = useCallback((item: NavItem) => {
         if ('action' in item && item.action === 'newChat') {
-            const newChatId = createChat()
-            navigate({ to: '/chats/$chatId', params: { chatId: newChatId } })
+            createChat(undefined, {
+                onSuccess: (data) => {
+                    navigate({ to: '/chats/$chatId', params: { chatId: data.chat.id } })
+                }
+            })
+            onClose()
+            return
         } else if (onNavAction) {
             const action = 'action' in item ? item.action : item.href
             onNavAction(action)

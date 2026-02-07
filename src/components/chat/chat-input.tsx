@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback, KeyboardEvent } from 'react'
 import { useChatStore } from '@/stores/chat-store'
+import { useCreateChat, useSendMessage } from '@/hooks/use-chat'
 import { Button, Textarea } from '@/components/ui'
 import { cn } from '@/lib/utils'
-import { generateMockResponse } from '@/lib/mock-data'
 import { Send, Paperclip, X, FileText, Image } from 'lucide-react'
 import { useUser } from '@/hooks/use-auth'
 import { toast } from 'sonner'
@@ -20,8 +20,9 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const { addMessage, activeChat, createChat, setThinking } = useChatStore()
-
+    const { activeChat, setThinking } = useChatStore()
+    const { mutate: createChat, isPending: isCreating } = useCreateChat()
+    const { mutate: sendMessage, isPending: isSending } = useSendMessage()
     const { data } = useUser()
     const user = data?.user
 
@@ -34,12 +35,6 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
         const trimmedInput = input.trim()
         if (!trimmedInput && attachedFiles.length === 0) return
 
-        // Create chat if none exists
-        let chatId = activeChat
-        if (!chatId) {
-            chatId = createChat()
-        }
-
         // Create attachments from files
         const attachments: MessageAttachment[] = attachedFiles.map(file => ({
             name: file.name,
@@ -47,34 +42,35 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
             size: file.size,
         }))
 
-        // Add user message
-        addMessage(chatId, {
-            role: 'user',
-            content: trimmedInput,
-            attachments: attachments.length > 0 ? attachments : undefined,
-        })
-
-        // Clear input
-        const hasFiles = attachedFiles.length > 0
-        setInput('')
-        setAttachedFiles([])
-
-        // Reset textarea height
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto'
-        }
-
-        // Show thinking state
+        // Optimistic UI updates could be handled here or by React Query
         setThinking(true)
 
-        // Generate mock response after delay (longer if files attached)
-        const delay = hasFiles ? 2500 : 1200
-        setTimeout(() => {
-            setThinking(false)
-            const mockResponse = generateMockResponse(trimmedInput, hasFiles)
-            addMessage(chatId!, mockResponse)
-        }, delay)
-    }, [input, attachedFiles, activeChat, addMessage, createChat, setThinking, user])
+        if (!activeChat) {
+            // Create new chat
+            createChat(trimmedInput, {
+                onSuccess: () => {
+                    setThinking(false)
+                    setInput('')
+                    setAttachedFiles([])
+                },
+                onError: () => setThinking(false)
+            })
+        } else {
+            // Send message to existing chat
+            sendMessage({
+                chatId: activeChat,
+                content: trimmedInput,
+                role: 'user'
+            }, {
+                onSuccess: () => {
+                    setThinking(false)
+                    setInput('')
+                    setAttachedFiles([])
+                },
+                onError: () => setThinking(false)
+            })
+        }
+    }, [input, attachedFiles, activeChat, createChat, sendMessage, setThinking, user])
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -109,7 +105,8 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
         }
     }
 
-    const canSubmit = (input.trim() || attachedFiles.length > 0) && !disabled
+    const isPending = isCreating || isSending
+    const canSubmit = (input.trim() || attachedFiles.length > 0) && !disabled && !isPending
 
     return (
         <div className={cn('space-y-2', className)}>
@@ -144,7 +141,7 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
                         size="icon"
                         className="h-8 w-8 shrink-0 rounded-lg"
                         onClick={() => setShowAttachMenu(!showAttachMenu)}
-                        disabled={disabled}
+                        disabled={disabled || isPending}
                     >
                         <Paperclip size={16} />
                     </Button>
@@ -184,7 +181,7 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                     placeholder={disabled ? 'Start a new chat...' : 'Ask a question...'}
-                    disabled={disabled}
+                    disabled={disabled || isPending}
                     className="flex-1 min-h-[36px] max-h-[160px] border-0 bg-transparent resize-none focus-visible:ring-0 focus-visible:ring-offset-0 py-2 text-base md:text-[13px]"
                     rows={1}
                 />
