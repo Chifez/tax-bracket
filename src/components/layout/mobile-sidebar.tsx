@@ -10,9 +10,10 @@ import { useUser, useLogout } from '@/hooks/use-auth'
 interface MobileSidebarProps {
     isOpen: boolean
     onClose: () => void
+    onNavAction?: (action: string) => void
 }
 
-export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
+export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarProps) {
     const { chats, activeChat, setActiveChat, createChat } = useChatStore()
     const { data } = useUser()
     const { mutate: logout } = useLogout()
@@ -21,9 +22,12 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     const handleNavClick = useCallback((item: NavItem) => {
         if ('action' in item && item.action === 'newChat') {
             createChat()
+        } else if (onNavAction) {
+            const action = 'action' in item ? item.action : item.href
+            onNavAction(action)
         }
         onClose()
-    }, [createChat, onClose])
+    }, [createChat, onClose, onNavAction])
 
     const handleChatSelect = useCallback((chatId: string) => {
         setActiveChat(chatId)

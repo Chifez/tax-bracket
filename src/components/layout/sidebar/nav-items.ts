@@ -1,4 +1,4 @@
-import { Home, Plus, Upload, BarChart3 } from 'lucide-react'
+import { Home, Plus, Upload, Search } from 'lucide-react'
 
 /**
  * Shared navigation items configuration for sidebars
@@ -6,8 +6,8 @@ import { Home, Plus, Upload, BarChart3 } from 'lucide-react'
 export const navItems = [
     { icon: Home, label: 'Home', href: '/' },
     { icon: Plus, label: 'New Chat', action: 'newChat' },
-    { icon: Upload, label: 'Upload', href: '/upload' },
-    { icon: BarChart3, label: 'Analytics', href: '/analytics' },
+    { icon: Search, label: 'Search', action: 'search' },
+    { icon: Upload, label: 'Uploads', href: '/uploads' },
 ] as const
 
 export type NavItem = typeof navItems[number]

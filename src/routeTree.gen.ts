@@ -9,13 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UploadsRouteImport } from './routes/uploads'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ChatsChatIdRouteImport } from './routes/chats/$chatId'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google/callback'
 
+const UploadsRoute = UploadsRouteImport.update({
+  id: '/uploads',
+  path: '/uploads',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatsChatIdRoute = ChatsChatIdRouteImport.update({
+  id: '/chats/$chatId',
+  path: '/chats/$chatId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
@@ -31,41 +43,79 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/uploads': typeof UploadsRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/chats/$chatId': typeof ChatsChatIdRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/uploads': typeof UploadsRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/chats/$chatId': typeof ChatsChatIdRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/uploads': typeof UploadsRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/chats/$chatId': typeof ChatsChatIdRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth/reset-password' | '/auth/google/callback'
+  fullPaths:
+    | '/'
+    | '/uploads'
+    | '/auth/reset-password'
+    | '/chats/$chatId'
+    | '/auth/google/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth/reset-password' | '/auth/google/callback'
-  id: '__root__' | '/' | '/auth/reset-password' | '/auth/google/callback'
+  to:
+    | '/'
+    | '/uploads'
+    | '/auth/reset-password'
+    | '/chats/$chatId'
+    | '/auth/google/callback'
+  id:
+    | '__root__'
+    | '/'
+    | '/uploads'
+    | '/auth/reset-password'
+    | '/chats/$chatId'
+    | '/auth/google/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  UploadsRoute: typeof UploadsRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+  ChatsChatIdRoute: typeof ChatsChatIdRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/uploads': {
+      id: '/uploads'
+      path: '/uploads'
+      fullPath: '/uploads'
+      preLoaderRoute: typeof UploadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chats/$chatId': {
+      id: '/chats/$chatId'
+      path: '/chats/$chatId'
+      fullPath: '/chats/$chatId'
+      preLoaderRoute: typeof ChatsChatIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/reset-password': {
@@ -87,7 +137,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  UploadsRoute: UploadsRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
+  ChatsChatIdRoute: ChatsChatIdRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport

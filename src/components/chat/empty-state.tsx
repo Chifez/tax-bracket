@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router'
 import { useChatStore } from '@/stores/chat-store'
 import { Button, Card } from '@/components/ui'
 import { Logo } from '@/components/logo'
@@ -32,12 +33,17 @@ const exampleQuestions = [
 export function EmptyState() {
     const { createChat, addMessage } = useChatStore()
 
-    const handleQuestionClick = (question: string) => {
+    const navigate = useNavigate()
+
+    const handleQuestionClick = async (question: string) => {
         const chatId = createChat()
         addMessage(chatId, {
             role: 'user',
             content: question,
         })
+
+        // Navigate to the new chat
+        await navigate({ to: '/chats/$chatId', params: { chatId } })
 
         // Trigger mock response
         setTimeout(() => {

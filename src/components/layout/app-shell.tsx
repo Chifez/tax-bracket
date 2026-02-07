@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { Sidebar } from './sidebar'
 import { MobileSidebar } from './mobile-sidebar'
 import { useChatStore } from '@/stores/chat-store'
@@ -24,23 +25,55 @@ export function AppShell({ children, className }: AppShellProps) {
     const user = data?.user
 
 
+    const [searchModalOpen, setSearchModalOpen] = useState(false)
+
     useEffect(() => {
         setHasMounted(true)
     }, [])
 
+    const navigate = useNavigate()
+
+    const handleNavAction = (action: string) => {
+        if (action === 'search') {
+            setSearchModalOpen(true)
+        } else {
+            navigate({ to: action })
+        }
+    }
 
     const showDesktopSidebar = hasMounted && !isMobile
     const showMobileSidebar = hasMounted && isMobile
 
     return (
         <div className={cn('flex h-dvh overflow-hidden', className)}>
-            {showDesktopSidebar && <Sidebar />}
+            {showDesktopSidebar && <Sidebar onNavAction={handleNavAction} />}
 
             {showMobileSidebar && (
                 <MobileSidebar
                     isOpen={mobileMenuOpen}
                     onClose={() => setMobileMenuOpen(false)}
+                    onNavAction={handleNavAction}
                 />
+            )}
+
+            {/* Search Modal Placeholder - Implement actual modal later */}
+            {searchModalOpen && (
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center pointer-events-auto" onClick={() => setSearchModalOpen(false)}>
+                    <div className="bg-background p-6 rounded-lg shadow-lg w-[500px]" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-lg font-semibold mb-4">Search</h2>
+                        <input
+                            type="text"
+                            placeholder="Search chats..."
+                            className="w-full px-3 py-2 border rounded-md"
+                            autoFocus
+                        />
+                        <div className="mt-4 flex justify-end">
+                            <Button onClick={() => setSearchModalOpen(false)}>
+                                Close
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {hasMounted && (

@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ChatContainer } from '@/components/chat'
+import { EmptyState } from '@/components/chat/empty-state'
 
 export const Route = createFileRoute('/')({
   component: HomePage
 })
 
 function HomePage() {
-  return <ChatContainer />
+  return <EmptyState />
 }

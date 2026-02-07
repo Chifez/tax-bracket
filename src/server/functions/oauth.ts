@@ -1,10 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
-import { setCookie } from 'vinxi/http'
 import { z } from 'zod'
 import { db } from '@/db'
 import { users } from '@/db/schema'
 import { eq } from 'drizzle-orm'
-import { createSession } from '@/server/lib/session'
+import { createSession, useAppSession } from '@/server/lib/session'
 
 const googleAuthSchema = z.object({
     code: z.string(),
@@ -38,7 +37,7 @@ export const getGoogleAuthUrl = createServerFn()
  * Handle Google Callback
  */
 export const handleGoogleCallback = createServerFn()
-    .handler(async (data: unknown) => {
+    .handler(async ({ data }) => {
         // Validate the incoming data
         const validatedData = googleAuthSchema.parse(data)
 
@@ -83,27 +82,30 @@ export const handleGoogleCallback = createServerFn()
                 email: profile.email,
                 name: profile.name,
                 googleId: profile.id,
+                image: profile.picture, // Save avatar
                 emailVerified: true,
             }).returning()
             user = newUser
-        } else if (!user.googleId) {
-            // Link existing user
-            await db.update(users)
-                .set({ googleId: profile.id, emailVerified: true })
-                .where(eq(users.id, user.id))
+        } else {
+            // Link existing user and update avatar if missing or changed
+            const shouldUpdate = !user.googleId || user.image !== profile.picture
+            if (shouldUpdate) {
+                await db.update(users)
+                    .set({
+                        googleId: profile.id,
+                        emailVerified: true,
+                        image: profile.picture // Update avatar
+                    })
+                    .where(eq(users.id, user.id))
+            }
         }
 
         // Create session
         const session = await createSession(user.id)
 
-        // Set cookie
-        setCookie('session_token', session.token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            expires: session.expiresAt
-        })
+        // Set cookie using TanStack Start context helper
+        const appSession = await useAppSession()
+        await appSession.update({ token: session.token })
 
         return { user }
     })
