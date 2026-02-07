@@ -1,6 +1,4 @@
-import { useNavigate } from '@tanstack/react-router'
 import { useCreateChat } from '@/hooks/use-chat'
-import { useQueryClient } from '@tanstack/react-query'
 import { Button, Card } from '@/components/ui'
 import { Logo } from '@/components/logo'
 import {
@@ -11,7 +9,6 @@ import {
     ArrowRight,
     Upload,
 } from 'lucide-react'
-import type { Message } from '@/types'
 
 const exampleQuestions = [
     {
@@ -34,51 +31,10 @@ const exampleQuestions = [
 
 export function EmptyState() {
     const { mutateAsync: createChat } = useCreateChat()
-    const queryClient = useQueryClient()
-    const navigate = useNavigate()
 
     const handleQuestionClick = async (question: string) => {
         try {
-            const { chat } = await createChat({ message: question })
-
-            // Navigate to the new chat
-            await navigate({ to: '/chats/$chatId', params: { chatId: chat.id } })
-
-            // Trigger mock response
-            setTimeout(() => {
-                const mockResponse: Message = {
-                    id: 'mock-response',
-                    role: 'assistant',
-                    content: '',
-                    responseMode: 'explained',
-                    timestamp: new Date().toISOString(),
-                    sections: [
-                        {
-                            id: '1',
-                            title: 'Getting started',
-                            // icon: 'file-text', // Check if icon uses string or component, type says string?
-                            contents: [
-                                { type: 'text', content: 'Upload your bank statements to get detailed financial analysis. I support PDF and CSV formats from Nigerian banks.' },
-                            ],
-                        },
-                    ],
-                    stats: {
-                        sources: 0,
-                        words: 24,
-                    },
-                }
-
-                queryClient.setQueryData(['chat', chat.id], (old: any) => {
-                    if (!old?.chat) return old
-                    return {
-                        ...old,
-                        chat: {
-                            ...old.chat,
-                            messages: [...old.chat.messages, mockResponse]
-                        }
-                    }
-                })
-            }, 800)
+            await createChat({ message: question })
         } catch (error) {
             console.error("Failed to create chat", error)
         }

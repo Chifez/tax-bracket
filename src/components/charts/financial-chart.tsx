@@ -19,10 +19,14 @@ const CHART_COLORS = [
 ]
 
 export const FinancialChart = memo(function FinancialChart({ chart, className }: FinancialChartProps) {
-    const chartType = chart.type || 'line'
-    const isMultiLine = chartType === 'multi-line'
     const seriesKeys = chart.yKeys || ['value']
-    const seriesCount = isMultiLine ? seriesKeys.length : 1
+    const xKey = chart.xKey || 'label'
+
+    // Determine if multi-line based on type OR number of keys
+    const isMultiLine = chart.type === 'multi-line' || seriesKeys.length > 1
+    const chartType = isMultiLine ? 'multi-line' : (chart.type || 'line')
+
+    const seriesCount = seriesKeys.length
 
     return (
         <Card className={cn('overflow-hidden mx-2 py-2', className)}>
@@ -62,7 +66,7 @@ export const FinancialChart = memo(function FinancialChart({ chart, className }:
                         <BarChart data={chart.data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                             <XAxis
-                                dataKey="label"
+                                dataKey={xKey}
                                 tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                                 axisLine={{ stroke: 'var(--border)' }}
                                 tickLine={false}
@@ -80,20 +84,25 @@ export const FinancialChart = memo(function FinancialChart({ chart, className }:
                                     borderRadius: '8px',
                                     fontSize: '12px'
                                 }}
-                                formatter={(value) => [formatValue(value as number), 'Value']}
+                                formatter={(value, name) => [formatValue(value as number), formatSeriesName(name as string)]}
+                                labelStyle={{ color: 'var(--foreground)' }}
                             />
-                            <Bar
-                                dataKey="value"
-                                fill="var(--primary)"
-                                radius={[4, 4, 0, 0]}
-                                maxBarSize={40}
-                            />
+                            {seriesKeys.map((key, index) => (
+                                <Bar
+                                    key={key}
+                                    dataKey={key}
+                                    name={key}
+                                    fill={chart.colors?.[index] || 'var(--primary)'}
+                                    radius={[4, 4, 0, 0]}
+                                    maxBarSize={40}
+                                />
+                            ))}
                         </BarChart>
-                    ) : isMultiLine ? (
+                    ) : (
                         <LineChart data={chart.data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                             <XAxis
-                                dataKey="label"
+                                dataKey={xKey}
                                 tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                                 axisLine={{ stroke: 'var(--border)' }}
                                 tickLine={false}
@@ -112,11 +121,14 @@ export const FinancialChart = memo(function FinancialChart({ chart, className }:
                                     fontSize: '12px'
                                 }}
                                 formatter={(value, name) => [formatValue((value as number) ?? 0), formatSeriesName(name as string)]}
+                                labelStyle={{ color: 'var(--foreground)' }}
                             />
-                            <Legend
-                                wrapperStyle={{ fontSize: '11px' }}
-                                formatter={(value) => formatSeriesName(value)}
-                            />
+                            {seriesKeys.length > 1 && (
+                                <Legend
+                                    wrapperStyle={{ fontSize: '11px' }}
+                                    formatter={(value) => formatSeriesName(value)}
+                                />
+                            )}
                             {seriesKeys.map((key, index) => (
                                 <Line
                                     key={key}
@@ -129,39 +141,6 @@ export const FinancialChart = memo(function FinancialChart({ chart, className }:
                                     activeDot={{ r: 5, strokeWidth: 0 }}
                                 />
                             ))}
-                        </LineChart>
-                    ) : (
-                        <LineChart data={chart.data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                            <XAxis
-                                dataKey="label"
-                                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-                                axisLine={{ stroke: 'var(--border)' }}
-                                tickLine={false}
-                            />
-                            <YAxis
-                                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-                                axisLine={false}
-                                tickLine={false}
-                                tickFormatter={(value) => formatValue(value)}
-                            />
-                            <Tooltip
-                                contentStyle={{
-                                    backgroundColor: 'var(--card)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '8px',
-                                    fontSize: '12px'
-                                }}
-                                formatter={(value) => [formatValue(value as number), 'Value']}
-                            />
-                            <Line
-                                type="monotone"
-                                dataKey="value"
-                                stroke="var(--primary)"
-                                strokeWidth={2}
-                                dot={{ fill: 'var(--primary)', strokeWidth: 0, r: 3 }}
-                                activeDot={{ r: 5, strokeWidth: 0 }}
-                            />
                         </LineChart>
                     )}
                 </ResponsiveContainer>

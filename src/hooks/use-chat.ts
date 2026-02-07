@@ -3,6 +3,8 @@ import { getChats, getChat, createChat, sendMessage, deleteChat } from '@/server
 import { useRouter } from '@tanstack/react-router'
 import { useChatStore } from '@/stores/chat-store'
 
+import { toast } from 'sonner'
+
 export const useChats = () => {
     return useQuery({
         queryKey: ['chats'],
@@ -39,8 +41,9 @@ export const useCreateChat = () => {
             setActiveChat(data.chat.id)
             router.navigate({ to: '/chats/$chatId', params: { chatId: data.chat.id } })
         },
-        onError: () => {
+        onError: (error) => {
             useChatStore.getState().setThinking(false)
+            toast.error("Failed to create chat: " + (error.message || "Unknown error"))
         }
     })
 }
@@ -64,8 +67,9 @@ export const useSendMessage = () => {
             queryClient.invalidateQueries({ queryKey: ['chats'] })
             setThinking(false)
         },
-        onError: () => {
+        onError: (error) => {
             setThinking(false)
+            toast.error("Failed to send message: " + (error.message || "Unknown error"))
         },
     })
 }
