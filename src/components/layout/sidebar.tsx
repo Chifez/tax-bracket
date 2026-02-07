@@ -32,7 +32,7 @@ export function Sidebar({ className, onNavAction }: SidebarProps) {
 
     const handleNavClick = useCallback((item: NavItem) => {
         if ('action' in item && item.action === 'newChat') {
-            createChat(undefined)
+            createChat({})
             return
         }
 

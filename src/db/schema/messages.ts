@@ -7,6 +7,11 @@ export const messages = pgTable('messages', {
     role: varchar('role', { length: 50 }).notNull(), // 'user' | 'assistant' | 'system'
     content: text('content').notNull(),
     attachments: json('attachments'), // Array of { name, type, size, url? }
+    sections: json('sections'), // Array of ResponseSection
+    charts: json('charts'), // Array of ChartData
+    stats: json('stats'), // MessageStats
+    sources: json('sources'), // Array of Source
+    metadata: json('metadata'), // Flexible metadata
     createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 

@@ -32,7 +32,7 @@ export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarPro
 
     const handleNavClick = useCallback((item: NavItem) => {
         if ('action' in item && item.action === 'newChat') {
-            createChat(undefined, {
+            createChat({}, {
                 onSuccess: (data) => {
                     navigate({ to: '/chats/$chatId', params: { chatId: data.chat.id } })
                 }

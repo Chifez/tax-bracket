@@ -24,23 +24,48 @@ export const useCreateChat = () => {
     const router = useRouter()
 
     return useMutation({
-        mutationFn: (message?: string) => createChat({ data: { message } }),
+        mutationFn: async ({ message, attachments }: { message?: string, attachments?: any[] }) => {
+            useChatStore.getState().setThinking(true)
+            try {
+                return await createChat({ data: { message, attachments } })
+            } catch (error) {
+                useChatStore.getState().setThinking(false)
+                throw error
+            }
+        },
         onSuccess: (data) => {
+            useChatStore.getState().setThinking(false)
             queryClient.invalidateQueries({ queryKey: ['chats'] })
             setActiveChat(data.chat.id)
             router.navigate({ to: '/chats/$chatId', params: { chatId: data.chat.id } })
         },
+        onError: () => {
+            useChatStore.getState().setThinking(false)
+        }
     })
 }
 
 export const useSendMessage = () => {
     const queryClient = useQueryClient()
+    const { setThinking } = useChatStore()
+
     return useMutation({
-        mutationFn: ({ chatId, content, role }: { chatId: string, content: string, role: 'user' | 'assistant' | 'system' }) =>
-            sendMessage({ data: { chatId, content, role } }),
-        onSuccess: (data, variables) => {
+        mutationFn: async ({ chatId, content, role, attachments }: { chatId: string, content: string, role: 'user' | 'assistant' | 'system', attachments?: any[] }) => {
+            setThinking(true)
+            try {
+                return await sendMessage({ data: { chatId, content, role, attachments } })
+            } catch (error) {
+                setThinking(false)
+                throw error
+            }
+        },
+        onSuccess: (_data, variables) => {
             queryClient.invalidateQueries({ queryKey: ['chat', variables.chatId] })
-            queryClient.invalidateQueries({ queryKey: ['chats'] }) // Update last message snippet in sidebar
+            queryClient.invalidateQueries({ queryKey: ['chats'] })
+            setThinking(false)
+        },
+        onError: () => {
+            setThinking(false)
         },
     })
 }

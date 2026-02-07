@@ -47,7 +47,7 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
 
         if (!activeChat) {
             // Create new chat
-            createChat(trimmedInput, {
+            createChat({ message: trimmedInput, attachments }, {
                 onSuccess: () => {
                     setThinking(false)
                     setInput('')
@@ -60,7 +60,8 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
             sendMessage({
                 chatId: activeChat,
                 content: trimmedInput,
-                role: 'user'
+                role: 'user',
+                attachments
             }, {
                 onSuccess: () => {
                     setThinking(false)

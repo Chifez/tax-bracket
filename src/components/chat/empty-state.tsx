@@ -39,7 +39,7 @@ export function EmptyState() {
 
     const handleQuestionClick = async (question: string) => {
         try {
-            const { chat } = await createChat(question)
+            const { chat } = await createChat({ message: question })
 
             // Navigate to the new chat
             await navigate({ to: '/chats/$chatId', params: { chatId: chat.id } })

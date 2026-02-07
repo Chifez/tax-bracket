@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import type { Message } from '@/types'
 import { cn } from '@/lib/utils'
-import { Card } from '@/components/ui'
 import { FinancialChart } from '@/components/charts'
 import { ChevronDown, Check } from 'lucide-react'
 import { StepSection, StatsBar } from './document-response/index'
@@ -55,9 +54,9 @@ export function DocumentResponse({ message, className }: DocumentResponseProps) 
                 {(!hasStructuredContent || isExpanded) && (
                     <div className="space-y-1">
                         {!hasStructuredContent && (
-                            <Card className="p-4">
-                                <p className="text-sm leading-relaxed">{message.content}</p>
-                            </Card>
+                            // Only show if there is substantial content to show, otherwise it might be just an empty shell if usage was strictly structured
+                            // But usually there is a summary string.
+                            <div className="px-4 text-sm leading-relaxed">{message.content}</div>
                         )}
 
                         {message.sections?.map((section, index) => (

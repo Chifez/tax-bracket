@@ -5,6 +5,37 @@ import { eq, desc, and } from 'drizzle-orm'
 import { getAuthenticatedUser } from '@/server/middleware/auth'
 import { createChatSchema, sendMessageSchema, getChatSchema, deleteChatSchema } from '@/server/validators/chat'
 import { notFound, unauthorized } from '@/server/lib/error'
+import { MOCK_RESPONSES } from '@/server/data/mock-responses'
+
+/**
+ * Helper to determine mock response
+ */
+function getMockResponse(content: string, hasAttachments: boolean) {
+    const lowerContent = content.toLowerCase()
+
+    // Greeting
+    if (['hello', 'hi', 'hey', 'start'].some(w => lowerContent.includes(w)) && !hasAttachments) {
+        return MOCK_RESPONSES.GREETING
+    }
+
+    // File based responses
+    if (hasAttachments) {
+        if (lowerContent.includes('tax')) return MOCK_RESPONSES.FILE_TAX
+        if (lowerContent.includes('bank') || lowerContent.includes('fee')) return MOCK_RESPONSES.FILE_BANK
+        if (lowerContent.includes('overview') || lowerContent.includes('summary')) return MOCK_RESPONSES.FILE_OVERVIEW
+        if (lowerContent.includes('deduct')) return MOCK_RESPONSES.FILE_DEDUCTIONS
+
+        // Default file response if no specific keyword
+        return MOCK_RESPONSES.FILE_OVERVIEW
+    }
+
+    // No file but asking for analysis
+    if (lowerContent.includes('tax') || lowerContent.includes('bank') || lowerContent.includes('analyze')) {
+        return MOCK_RESPONSES.NO_FILE_TAX_BANK
+    }
+
+    return MOCK_RESPONSES.DEFAULT
+}
 
 /**
  * Get all chats for the current user
@@ -54,7 +85,12 @@ export const getChat = createServerFn()
                     ...msg,
                     timestamp: msg.createdAt.toISOString(),
                     role: msg.role as any,
-                    attachments: msg.attachments as any
+                    attachments: msg.attachments as any,
+                    sections: msg.sections as any,
+                    charts: msg.charts as any,
+                    stats: msg.stats as any,
+                    sources: msg.sources as any,
+                    metadata: msg.metadata as any
                 }))
             }
         }
@@ -78,11 +114,27 @@ export const createChat = createServerFn({ method: 'POST' })
 
         let savedMessages: any[] = []
         if (data.message) {
-            savedMessages = await db.insert(messages).values({
+            // User message
+            const [userMsg] = await db.insert(messages).values({
                 chatId: newChat.id,
                 role: 'user',
                 content: data.message,
+                attachments: data.attachments, // Save attachments
             }).returning()
+            savedMessages.push(userMsg)
+
+            // Determine Mock Response
+            const mockData = getMockResponse(data.message, (data.attachments?.length || 0) > 0)
+
+            const [aiMsg] = await db.insert(messages).values({
+                chatId: newChat.id,
+                role: 'assistant',
+                content: mockData.content,
+                sections: mockData.sections,
+                charts: 'charts' in mockData ? (mockData as any).charts : undefined,
+                stats: mockData.stats
+            }).returning()
+            savedMessages.push(aiMsg)
         }
 
         return {
@@ -92,7 +144,12 @@ export const createChat = createServerFn({ method: 'POST' })
                     ...msg,
                     timestamp: msg.createdAt.toISOString(),
                     role: msg.role as any,
-                    attachments: msg.attachments as any
+                    attachments: msg.attachments as any,
+                    sections: msg.sections as any,
+                    charts: msg.charts as any,
+                    stats: msg.stats as any,
+                    sources: msg.sources as any,
+                    metadata: msg.metadata as any
                 }))
             }
         }
@@ -109,7 +166,7 @@ export const sendMessage = createServerFn({ method: 'POST' })
             throw unauthorized()
         }
 
-        // Verify chat ownership
+        // Verify chat ownership and get current title
         const chat = await db.query.chats.findFirst({
             where: and(eq(chats.id, data.chatId), eq(chats.userId, user.id))
         })
@@ -122,19 +179,63 @@ export const sendMessage = createServerFn({ method: 'POST' })
             chatId: data.chatId,
             role: data.role,
             content: data.content,
+            attachments: data.attachments,
         }).returning()
 
         // Update chat updatedAt
+        const updateData: Partial<typeof chats.$inferInsert> = {
+            updatedAt: new Date()
+        }
+
+        // Update title if it's the first message or title is "New Chat"
+        if (chat.title === 'New Chat') {
+            updateData.title = data.content.slice(0, 50)
+        }
+
         await db.update(chats)
-            .set({ updatedAt: new Date() })
+            .set(updateData)
             .where(eq(chats.id, data.chatId))
+
+        // Mock AI Response with structured data
+        if (data.role === 'user') {
+            const hasAttachments = (data.attachments?.length || 0) > 0
+            const mockData = getMockResponse(data.content, hasAttachments)
+
+            await db.insert(messages).values({
+                chatId: data.chatId,
+                role: 'assistant',
+                content: mockData.content,
+                sections: mockData.sections,
+                charts: 'charts' in mockData ? (mockData as any).charts : undefined,
+                stats: mockData.stats
+            })
+
+            return {
+                message: {
+                    ...newMessage,
+                    timestamp: newMessage.createdAt.toISOString(),
+                    role: newMessage.role as any,
+                    attachments: newMessage.attachments as any,
+                    sections: newMessage.sections as any,
+                    charts: newMessage.charts as any,
+                    stats: newMessage.stats as any,
+                    sources: newMessage.sources as any,
+                    metadata: newMessage.metadata as any
+                }
+            }
+        }
 
         return {
             message: {
                 ...newMessage,
                 timestamp: newMessage.createdAt.toISOString(),
                 role: newMessage.role as any,
-                attachments: newMessage.attachments as any
+                attachments: newMessage.attachments as any,
+                sections: newMessage.sections as any,
+                charts: newMessage.charts as any,
+                stats: newMessage.stats as any,
+                sources: newMessage.sources as any,
+                metadata: newMessage.metadata as any
             }
         }
     })
