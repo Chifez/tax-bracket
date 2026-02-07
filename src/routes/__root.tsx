@@ -52,6 +52,10 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
+import { Toaster } from 'sonner'
+
+// ... existing code ...
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -64,6 +68,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <AppShell>
               {children}
             </AppShell>
+            <Toaster position="top-center" richColors />
           </ThemeProvider>
           <TanStackDevtools
             config={{

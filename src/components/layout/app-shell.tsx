@@ -8,7 +8,6 @@ import { Button, Avatar, AvatarFallback, AvatarImage } from '@/components/ui'
 import { PanelLeft, PanelLeftClose, Menu, LogIn } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AuthModal } from '@/components/auth/auth-modal'
-import { SettingsModal } from '@/components/layout/sidebar/settings-modal'
 import { SearchModal } from '@/components/search-modal'
 import { useUser } from '@/hooks/use-auth'
 
@@ -22,7 +21,6 @@ export function AppShell({ children, className }: AppShellProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [authModalOpen, setAuthModalOpen] = useState(false)
     const [searchModalOpen, setSearchModalOpen] = useState(false)
-    const [settingsModalOpen, setSettingsModalOpen] = useState(false)
 
     const [hasMounted, setHasMounted] = useState(false)
     const isMobile = useIsMobile()
@@ -50,8 +48,6 @@ export function AppShell({ children, className }: AppShellProps) {
     const handleNavAction = useCallback((action: string) => {
         if (action === 'search') {
             setSearchModalOpen(true)
-        } else if (action === 'settings') {
-            setSettingsModalOpen(true)
         } else {
             navigate({ to: action })
         }
@@ -68,14 +64,12 @@ export function AppShell({ children, className }: AppShellProps) {
             {showDesktopSidebar && (
                 <Sidebar
                     onNavAction={handleNavAction}
-                    onSettingsClick={() => setSettingsModalOpen(true)}
                 />
             )}
 
             {showMobileSidebar && (
                 <MobileSidebar
                     isOpen={mobileMenuOpen}
-                    onSettingsClick={() => setSettingsModalOpen(true)}
                     onClose={() => setMobileMenuOpen(false)}
                     onNavAction={handleNavAction}
                 />
@@ -84,11 +78,6 @@ export function AppShell({ children, className }: AppShellProps) {
             <SearchModal
                 open={searchModalOpen}
                 onOpenChange={setSearchModalOpen}
-            />
-
-            <SettingsModal
-                open={settingsModalOpen}
-                onOpenChange={setSettingsModalOpen}
             />
 
             {hasMounted && (
@@ -125,6 +114,9 @@ export function AppShell({ children, className }: AppShellProps) {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 rounded-full ring-2 ring-primary/20 hover:ring-primary/40 transition-all bg-background"
+                                onClick={() => {
+                                    navigate({ to: '/settings' })
+                                }}
                             >
                                 <Avatar className="h-8 w-8">
                                     {user?.image && <AvatarImage src={user.image} key={user.image} />}

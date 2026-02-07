@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useChatStore } from '@/stores/chat-store'
 import { Logo } from '@/components/logo'
 import { Separator, ScrollArea } from '@/components/ui'
@@ -18,6 +19,7 @@ export function Sidebar({ className, onNavAction, onSettingsClick }: SidebarProp
     const { isSidebarOpen, chats, activeChat, setActiveChat, createChat } = useChatStore()
     const { data } = useUser()
     const { mutate: logout } = useLogout()
+    const navigate = useNavigate()
     const user = data?.user
 
     const handleNavClick = useCallback((item: NavItem) => {
@@ -89,20 +91,26 @@ export function Sidebar({ className, onNavAction, onSettingsClick }: SidebarProp
                 <SidebarButton
                     isCollapsed={!isSidebarOpen}
                     tooltip="Settings"
-                    onClick={onSettingsClick}
+                    onClick={() => user && navigate({ to: '/settings' })}
                     icon={<Settings size={16} strokeWidth={1.75} className="shrink-0" />}
+                    className={cn(!user && "opacity-50 cursor-default")}
                 >
                     Settings
                 </SidebarButton>
 
-                <SidebarButton
-                    isCollapsed={!isSidebarOpen}
-                    tooltip="Logout"
-                    icon={<LogOut size={16} strokeWidth={1.75} className="shrink-0" />}
-                    onClick={() => logout()}
-                >
-                    Logout
-                </SidebarButton>
+                {user && (
+                    <SidebarButton
+                        isCollapsed={!isSidebarOpen}
+                        tooltip="Logout"
+                        icon={<LogOut size={16} strokeWidth={1.75} className="shrink-0" />}
+                        onClick={() => {
+                            logout()
+                            navigate({ to: '/' })
+                        }}
+                    >
+                        Logout
+                    </SidebarButton>
+                )}
                 <ProfileDropdown
                     isCollapsed={!isSidebarOpen}
                     user={user}

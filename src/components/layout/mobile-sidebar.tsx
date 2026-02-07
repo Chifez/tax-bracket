@@ -12,7 +12,7 @@ interface MobileSidebarProps {
     isOpen: boolean
     onClose: () => void
     onNavAction?: (action: string) => void
-    onSettingsClick: () => void
+    onSettingsClick?: () => void
 }
 
 export function MobileSidebar({ isOpen, onClose, onNavAction, onSettingsClick }: MobileSidebarProps) {
@@ -135,22 +135,23 @@ export function MobileSidebar({ isOpen, onClose, onNavAction, onSettingsClick }:
                     </SidebarButton>
 
                     <SidebarButton
-
                         tooltip="Settings"
                         icon={<Settings size={16} strokeWidth={1.75} className="shrink-0" />}
-                        onClick={onSettingsClick}
+                        onClick={() => user && navigate({ to: '/settings' })}
+                        className={cn(!user && "opacity-50 cursor-default")}
                     >
                         Settings
                     </SidebarButton>
 
-                    <SidebarButton
-
-                        tooltip="Logout"
-                        icon={<LogOut size={16} strokeWidth={1.75} className="shrink-0" />}
-                        onClick={() => logout()}
-                    >
-                        Logout
-                    </SidebarButton>
+                    {user && (
+                        <SidebarButton
+                            tooltip="Logout"
+                            icon={<LogOut size={16} strokeWidth={1.75} className="shrink-0" />}
+                            onClick={() => logout()}
+                        >
+                            Logout
+                        </SidebarButton>
+                    )}
                     <ProfileDropdown
                         user={user}
                         side="top"

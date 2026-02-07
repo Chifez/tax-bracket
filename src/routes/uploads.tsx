@@ -16,8 +16,15 @@ export const Route = createFileRoute('/uploads')({
   component: UploadsPage
 })
 
+import { useUser } from '@/hooks/use-auth'
+import { toast } from 'sonner'
+
+// ...
+
 function UploadsPage() {
   const { uploadedFiles } = useChatStore()
+  const { data } = useUser()
+  const user = data?.user
   const [searchQuery, setSearchQuery] = useState('')
 
   // Mock data if no files exist
@@ -32,13 +39,20 @@ function UploadsPage() {
   )
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="p-10 flex flex-col h-full bg-background">
       <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Uploads</h1>
           <p className="text-sm text-muted-foreground">Manage your documents.</p>
         </div>
-        <Button size="sm">
+        <Button
+          size="sm"
+          onClick={() => {
+            if (!user) {
+              toast.error("You must be logged in to upload files")
+            }
+          }}
+        >
           <Upload className="mr-2 h-4 w-4" />
           Upload New
         </Button>

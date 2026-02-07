@@ -19,7 +19,6 @@ export const SidebarNavItems = memo(function SidebarNavItems({
         <>
             {navItems.map((item) => {
                 const Icon = item.icon
-                const isNewChat = 'action' in item && item.action === 'newChat'
 
                 const button = (
                     <button
@@ -27,9 +26,7 @@ export const SidebarNavItems = memo(function SidebarNavItems({
                         className={cn(
                             'flex items-center gap-3 w-full rounded-lg transition-colors text-xs',
                             isCollapsed ? 'justify-center p-2' : 'px-3 py-2',
-                            isNewChat
-                                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                            'text-muted-foreground hover:text-foreground hover:bg-muted'
                         )}
                     >
                         <Icon size={16} strokeWidth={1.5} className="shrink-0" />

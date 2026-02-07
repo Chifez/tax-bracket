@@ -4,6 +4,8 @@ import { Button, Textarea } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { generateMockResponse } from '@/lib/mock-data'
 import { Send, Paperclip, X, FileText, Image } from 'lucide-react'
+import { useUser } from '@/hooks/use-auth'
+import { toast } from 'sonner'
 import type { MessageAttachment } from '@/types'
 
 interface ChatInputProps {
@@ -20,7 +22,15 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
 
     const { addMessage, activeChat, createChat, setThinking } = useChatStore()
 
+    const { data } = useUser()
+    const user = data?.user
+
     const handleSubmit = useCallback(() => {
+        if (!user) {
+            toast.error("You must be logged in to send messages")
+            return
+        }
+
         const trimmedInput = input.trim()
         if (!trimmedInput && attachedFiles.length === 0) return
 
@@ -64,7 +74,7 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
             const mockResponse = generateMockResponse(trimmedInput, hasFiles)
             addMessage(chatId!, mockResponse)
         }, delay)
-    }, [input, attachedFiles, activeChat, addMessage, createChat, setThinking])
+    }, [input, attachedFiles, activeChat, addMessage, createChat, setThinking, user])
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {

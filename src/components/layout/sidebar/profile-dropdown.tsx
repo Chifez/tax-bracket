@@ -20,32 +20,40 @@ interface ProfileDropdownProps {
 }
 
 export function ProfileDropdown({ user, isCollapsed, side = 'right' }: ProfileDropdownProps) {
+    const TriggerButton = (
+        <Button
+            variant="ghost"
+            className={cn(
+                "w-full h-auto p-2 gap-2 hover:bg-muted justify-start",
+                isCollapsed && "justify-center px-2",
+                !user && "cursor-default hover:bg-transparent"
+            )}
+            onClick={(e) => !user && e.preventDefault()}
+        >
+            <Avatar className="h-7 w-7 ring-2 ring-primary/20 shrink-0">
+                <AvatarImage src={user?.image} />
+                <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                    {user?.name?.slice(0, 2).toUpperCase() || 'U'}
+                </AvatarFallback>
+            </Avatar>
+
+            {!isCollapsed && (
+                <div className="flex-1 text-left overflow-hidden">
+                    <p className="text-[10px] font-medium truncate">{user?.name || 'Guest'}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{user?.email || 'Not logged in'}</p>
+                </div>
+            )}
+        </Button>
+    )
+
+    if (!user) {
+        return TriggerButton
+    }
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button
-                    variant="ghost"
-                    className={cn(
-                        "w-full h-auto p-2 gap-2 hover:bg-muted justify-start",
-                        isCollapsed && "justify-center px-2"
-                    )}
-                >
-                    <Avatar className="h-7 w-7 ring-2 ring-primary/20 shrink-0">
-                        {user?.image && <AvatarImage src={user.image} key={user.image} />}
-                        {/* <AvatarImage src={user?.image ?? undefined} /> */}
-                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                            {user?.name?.slice(0, 2).toUpperCase() || 'U'}
-                        </AvatarFallback>
-                    </Avatar>
-
-                    {!isCollapsed && (
-                        <div className="flex-1 text-left overflow-hidden">
-                            <p className="text-[10px] font-medium truncate">{user?.name || 'User'}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
-                        </div>
-                    )}
-                </Button>
+                {TriggerButton}
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" side={side} align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
