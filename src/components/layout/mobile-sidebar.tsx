@@ -1,25 +1,25 @@
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useChatStore } from '@/stores/chat-store'
 import { Logo } from '@/components/logo'
 import { Button, Separator, ScrollArea } from '@/components/ui'
 import { cn } from '@/lib/utils'
-import { MessageSquare, X } from 'lucide-react'
-import { navItems, type NavItem, ThemeToggle, ProfileDropdown, SettingsModal } from './sidebar/index'
+import { LogOut, MessageSquare, Settings, X } from 'lucide-react'
+import { navItems, type NavItem, ThemeToggle, ProfileDropdown, SidebarButton } from './sidebar/index'
 import { useUser, useLogout } from '@/hooks/use-auth'
 
 interface MobileSidebarProps {
     isOpen: boolean
     onClose: () => void
     onNavAction?: (action: string) => void
+    onSettingsClick: () => void
 }
 
-export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarProps) {
+export function MobileSidebar({ isOpen, onClose, onNavAction, onSettingsClick }: MobileSidebarProps) {
     const { chats, activeChat, setActiveChat, createChat } = useChatStore()
     const { data } = useUser()
     const { mutate: logout } = useLogout()
     const user = data?.user
-    const [settingsOpen, setSettingsOpen] = useState(false)
     const navigate = useNavigate()
 
     const handleNavClick = useCallback((item: NavItem) => {
@@ -124,18 +124,39 @@ export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarPro
 
                 <Separator />
 
-                <div className="flex flex-col gap-1 p-3 shrink-0">
-                    <ThemeToggle showLabel className="justify-start px-3 py-2.5" />
 
+                <div className="flex flex-col gap-1 p-2 shrink-0">
+                    <SidebarButton
+
+                        tooltip="Theme"
+                        asChild
+                    >
+                        <ThemeToggle showLabel />
+                    </SidebarButton>
+
+                    <SidebarButton
+
+                        tooltip="Settings"
+                        icon={<Settings size={16} strokeWidth={1.75} className="shrink-0" />}
+                        onClick={onSettingsClick}
+                    >
+                        Settings
+                    </SidebarButton>
+
+                    <SidebarButton
+
+                        tooltip="Logout"
+                        icon={<LogOut size={16} strokeWidth={1.75} className="shrink-0" />}
+                        onClick={() => logout()}
+                    >
+                        Logout
+                    </SidebarButton>
                     <ProfileDropdown
                         user={user}
                         side="top"
-                        onSettingsClick={() => setSettingsOpen(true)}
                     />
                 </div>
             </aside>
-
-            <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
         </>
     )
 }

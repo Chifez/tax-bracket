@@ -9,8 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { useLogout } from '@/hooks/use-auth'
-import { User, Settings, LogOut } from 'lucide-react'
+import { User, HelpCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ProfileDropdownProps {
@@ -20,8 +19,7 @@ interface ProfileDropdownProps {
     onSettingsClick?: () => void
 }
 
-export function ProfileDropdown({ user, isCollapsed, side = 'right', onSettingsClick }: ProfileDropdownProps) {
-    const { mutate: logout } = useLogout()
+export function ProfileDropdown({ user, isCollapsed, side = 'right' }: ProfileDropdownProps) {
 
     return (
         <DropdownMenu>
@@ -33,21 +31,18 @@ export function ProfileDropdown({ user, isCollapsed, side = 'right', onSettingsC
                         isCollapsed && "justify-center px-2"
                     )}
                 >
-                    <Avatar className="h-6 w-6 shrink-0">
-                        {user?.image && <AvatarImage src={user.image} />}
-                        <AvatarFallback className="text-[10px]">
+                    <Avatar className="h-7 w-7 ring-2 ring-primary/20 shrink-0">
+                        {user?.image && <AvatarImage src={user.image} key={user.image} />}
+                        {/* <AvatarImage src={user?.image ?? undefined} /> */}
+                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                             {user?.name?.slice(0, 2).toUpperCase() || 'U'}
                         </AvatarFallback>
                     </Avatar>
 
                     {!isCollapsed && (
-                        <div className="flex flex-col items-start min-w-0">
-                            <span className="text-sm font-medium truncate w-full text-left">
-                                {user?.name || 'User'}
-                            </span>
-                            <span className="text-xs text-muted-foreground truncate w-full text-left">
-                                {user?.email}
-                            </span>
+                        <div className="flex-1 text-left overflow-hidden">
+                            <p className="text-[10px] font-medium truncate">{user?.name || 'User'}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
                         </div>
                     )}
                 </Button>
@@ -64,19 +59,14 @@ export function ProfileDropdown({ user, isCollapsed, side = 'right', onSettingsC
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                     <DropdownMenuItem>
-                        <User className="mr-2 h-4 w-4" />
+                        <User size={16} strokeWidth={1.75} className="mr-2 h-4 w-4" />
                         <span>Profile</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onSettingsClick}>
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Settings</span>
+                    <DropdownMenuItem >
+                        <HelpCircle size={16} strokeWidth={1.75} className="mr-2 h-4 w-4" />
+                        <span>Help & Support</span>
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => logout()}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
     )

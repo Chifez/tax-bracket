@@ -16,7 +16,7 @@ interface SettingsModalProps {
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px] h-[500px] flex flex-col p-0 gap-0 overflow-hidden">
+            <DialogContent className=" max-sm:w-full sm:max-w-[600px] h-[500px] flex flex-col p-0 gap-0 overflow-hidden">
                 <DialogHeader className="px-6 py-4 border-b shrink-0">
                     <DialogTitle>Settings</DialogTitle>
                 </DialogHeader>

@@ -4,15 +4,17 @@ import { Logo } from '@/components/logo'
 import { Separator, ScrollArea } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { Settings, LogOut } from 'lucide-react'
-import { SidebarNavItems, SidebarChatList, ThemeToggle, SidebarButton, ProfileButton, type NavItem } from './sidebar/index'
+import { SidebarNavItems, SidebarChatList, ThemeToggle, SidebarButton, type NavItem, ProfileDropdown } from './sidebar/index'
 import { useUser, useLogout } from '@/hooks/use-auth'
+
 
 interface SidebarProps {
     className?: string
     onNavAction?: (action: string) => void
+    onSettingsClick?: () => void
 }
 
-export function Sidebar({ className, onNavAction }: SidebarProps) {
+export function Sidebar({ className, onNavAction, onSettingsClick }: SidebarProps) {
     const { isSidebarOpen, chats, activeChat, setActiveChat, createChat } = useChatStore()
     const { data } = useUser()
     const { mutate: logout } = useLogout()
@@ -87,6 +89,7 @@ export function Sidebar({ className, onNavAction }: SidebarProps) {
                 <SidebarButton
                     isCollapsed={!isSidebarOpen}
                     tooltip="Settings"
+                    onClick={onSettingsClick}
                     icon={<Settings size={16} strokeWidth={1.75} className="shrink-0" />}
                 >
                     Settings
@@ -100,8 +103,12 @@ export function Sidebar({ className, onNavAction }: SidebarProps) {
                 >
                     Logout
                 </SidebarButton>
+                <ProfileDropdown
+                    isCollapsed={!isSidebarOpen}
+                    user={user}
+                    side="right"
+                />
 
-                <ProfileButton isCollapsed={!isSidebarOpen} user={user} />
             </div>
         </aside>
     )
