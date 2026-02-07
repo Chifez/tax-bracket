@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadsRouteImport } from './routes/uploads'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ChatsChatIdRouteImport } from './routes/chats/$chatId'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
@@ -18,6 +19,11 @@ import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google/cal
 const UploadsRoute = UploadsRouteImport.update({
   id: '/uploads',
   path: '/uploads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,6 +49,7 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/uploads': typeof UploadsRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/uploads': typeof UploadsRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/uploads': typeof UploadsRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
@@ -67,6 +76,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/settings'
     | '/uploads'
     | '/auth/reset-password'
     | '/chats/$chatId'
@@ -74,6 +84,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/settings'
     | '/uploads'
     | '/auth/reset-password'
     | '/chats/$chatId'
@@ -81,6 +92,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/settings'
     | '/uploads'
     | '/auth/reset-password'
     | '/chats/$chatId'
@@ -89,6 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SettingsRoute: typeof SettingsRoute
   UploadsRoute: typeof UploadsRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   ChatsChatIdRoute: typeof ChatsChatIdRoute
@@ -102,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/uploads'
       fullPath: '/uploads'
       preLoaderRoute: typeof UploadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -137,6 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SettingsRoute: SettingsRoute,
   UploadsRoute: UploadsRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
   ChatsChatIdRoute: ChatsChatIdRoute,

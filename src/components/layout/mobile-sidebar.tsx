@@ -1,10 +1,11 @@
-import { useCallback } from 'react'
+import { useState, useCallback } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useChatStore } from '@/stores/chat-store'
 import { Logo } from '@/components/logo'
-import { Button, Separator, Avatar, AvatarFallback, AvatarImage, ScrollArea } from '@/components/ui'
+import { Button, Separator, ScrollArea } from '@/components/ui'
 import { cn } from '@/lib/utils'
-import { Settings, MessageSquare, X, LogOut } from 'lucide-react'
-import { navItems, type NavItem, ThemeToggle } from './sidebar/index'
+import { MessageSquare, X } from 'lucide-react'
+import { navItems, type NavItem, ThemeToggle, ProfileDropdown, SettingsModal } from './sidebar/index'
 import { useUser, useLogout } from '@/hooks/use-auth'
 
 interface MobileSidebarProps {
@@ -18,16 +19,19 @@ export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarPro
     const { data } = useUser()
     const { mutate: logout } = useLogout()
     const user = data?.user
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const navigate = useNavigate()
 
     const handleNavClick = useCallback((item: NavItem) => {
         if ('action' in item && item.action === 'newChat') {
-            createChat()
+            const newChatId = createChat()
+            navigate({ to: '/chats/$chatId', params: { chatId: newChatId } })
         } else if (onNavAction) {
             const action = 'action' in item ? item.action : item.href
             onNavAction(action)
         }
         onClose()
-    }, [createChat, onClose, onNavAction])
+    }, [createChat, onClose, onNavAction, navigate])
 
     const handleChatSelect = useCallback((chatId: string) => {
         setActiveChat(chatId)
@@ -123,33 +127,15 @@ export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarPro
                 <div className="flex flex-col gap-1 p-3 shrink-0">
                     <ThemeToggle showLabel className="justify-start px-3 py-2.5" />
 
-                    <button className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-sm">
-                        <Settings size={18} strokeWidth={1.5} className="shrink-0" />
-                        <span>Settings</span>
-                    </button>
-
-                    <button
-                        onClick={() => logout()}
-                        className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-sm"
-                    >
-                        <LogOut size={18} strokeWidth={1.5} className="shrink-0" />
-                        <span>Logout</span>
-                    </button>
-
-                    <button className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 hover:bg-muted transition-colors">
-                        <Avatar className="h-8 w-8 ring-2 ring-primary/20 shrink-0">
-                            <AvatarImage src={undefined} />
-                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                                {user?.name?.slice(0, 2).toUpperCase() || 'U'}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 text-left overflow-hidden">
-                            <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
-                            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-                        </div>
-                    </button>
+                    <ProfileDropdown
+                        user={user}
+                        side="top"
+                        onSettingsClick={() => setSettingsOpen(true)}
+                    />
                 </div>
             </aside>
+
+            <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
         </>
     )
 }

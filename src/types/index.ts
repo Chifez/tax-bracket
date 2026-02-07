@@ -124,6 +124,7 @@ export interface UploadedFile {
         start: string
         end: string
     }
+    createdAt: string
 }
 
 // ========================================
