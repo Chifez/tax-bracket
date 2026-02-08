@@ -26,13 +26,13 @@ export const Route = createFileRoute('/api/chat')({
                 }
 
                 let chatId = existingChatId
+                const isNewChat = !existingChatId // Track if this is a new chat
 
-                // Helper to safely get string content
                 // Helper to safely get string content from UIMessage
                 const getMessageContent = (message?: UIMessage) => {
                     if (!message) return ''
 
-                    // Check for parts array (v6 format) - THIS IS WHAT WAS MISSING
+                    // Check for parts array (v6 format)
                     if ('parts' in message && Array.isArray(message.parts)) {
                         return message.parts
                             .filter(part => part.type === 'text')
@@ -96,7 +96,8 @@ export const Route = createFileRoute('/api/chat')({
                 // 4. Generate AI Response
                 const systemMessage = systemPrompt(fileContext)
 
-                if (incomingMessages.length <= 1) {
+                // Generate title for new chats
+                if (isNewChat && incomingMessages.length <= 1) {
                     generateChatTitle(chatId, lastContent || legacyContent, currentFileIds)
                 }
 
@@ -148,7 +149,6 @@ export const Route = createFileRoute('/api/chat')({
 
                         if (toolCalls) {
                             for (const call of toolCalls) {
-                                // Cast to any to safely access args or input
                                 const args = (call as any).args || (call as any).input;
 
                                 if (call.toolName === 'generate_financial_chart') {
@@ -175,7 +175,8 @@ export const Route = createFileRoute('/api/chat')({
 
                 return result.toUIMessageStreamResponse({
                     headers: {
-                        'x-chat-id': chatId
+                        'x-chat-id': chatId,
+                        'x-is-new-chat': isNewChat ? 'true' : 'false'
                     }
                 })
             },
