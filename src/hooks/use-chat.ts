@@ -45,6 +45,7 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
                 chatId,
             },
             async fetch(url, options) {
+
                 const response = await fetch(url, options)
 
                 const returnedChatId = response.headers.get('x-chat-id')
