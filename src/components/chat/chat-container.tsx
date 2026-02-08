@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect } from 'react'
 import { useChatStore } from '@/stores/chat-store'
 import { useChatData, useChatSession } from '@/hooks/use-chat'
 import { ScrollArea } from '@/components/ui'
@@ -8,6 +8,7 @@ import { EmptyState } from './empty-state'
 import { MessageBubble } from './message-bubble'
 import { ThinkingAnimation } from './thinking-animation'
 import { cn } from '@/lib/utils'
+import type { UIMessage } from 'ai'
 
 interface ChatContainerProps {
     className?: string
@@ -16,7 +17,7 @@ interface ChatContainerProps {
 export function ChatContainer({ className }: ChatContainerProps) {
     const { activeChat } = useChatStore()
 
-    const { data: chatData, isLoading: isInitialLoading } = useChatData(activeChat)
+    const { data: chatData, isLoading: isInitialLoading, refetch } = useChatData(activeChat)
 
     // Convert your Message type to UIMessage if needed
     const initialMessages = (chatData?.chat?.messages ?? []) as any
@@ -30,12 +31,41 @@ export function ChatContainer({ className }: ChatContainerProps) {
         setMessages
     } = useChatSession(activeChat, initialMessages)
 
+    // Refetch when activeChat changes
+    useEffect(() => {
+        if (activeChat) {
+            const timer = setTimeout(() => {
+                refetch()
+            }, 100)
+            return () => clearTimeout(timer)
+        }
+    }, [activeChat, refetch])
+
+    // Sync messages from DB to local state
+    useEffect(() => {
+        if (chatData?.chat?.messages && chatData.chat.messages.length > 0) {
+            // Convert DB messages to UIMessage format
+            const dbMessages = chatData.chat.messages.map((msg: any) => ({
+                id: msg.id,
+                role: msg.role,
+                parts: [{ type: 'text' as const, text: msg.content }],
+                createdAt: msg.createdAt,
+                // Preserve any other properties for legacy messages
+                ...msg
+            })) as UIMessage[]
+
+            setMessages(dbMessages)
+        }
+    }, [chatData, setMessages])
+
     const bottomRef = useRef<HTMLDivElement>(null)
 
     // Auto-scroll on new messages
     useEffect(() => {
         if (messages.length > 0 || isLoading) {
-            bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+            setTimeout(() => {
+                bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+            }, 100)
         }
     }, [messages, isLoading])
 

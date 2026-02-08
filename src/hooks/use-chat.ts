@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai' // Import from 'ai' package
 import type { UIMessage } from 'ai'
-import { useEffect } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 export const useChats = () => {
     return useQuery({
@@ -26,7 +26,8 @@ export const useChatData = (chatId: string | null) => {
 export const useChatSession = (chatId: string | null, initialMessages: UIMessage[] = []) => {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const { setThinking } = useChatStore()
+    const { setThinking, setActiveChat } = useChatStore()
+    const [newChatId, setNewChatId] = useState<string | null>(null)
 
     const {
         messages,
@@ -43,31 +44,33 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
             body: {
                 chatId,
             },
-            // Add custom fetch to intercept response headers
             async fetch(url, options) {
                 const response = await fetch(url, options)
 
-                // Only handle new chat creation (when we don't have a chatId yet)
-                if (!chatId) {
-                    const newChatId = response.headers.get('x-chat-id')
-                    if (newChatId) {
-                        // Update URL to new chat
-                        window.history.replaceState({}, '', `/chats/${newChatId}`)
-                        // Refresh sidebar to show new chat
-                        queryClient.invalidateQueries({ queryKey: ['chats'] })
-                    }
+                const returnedChatId = response.headers.get('x-chat-id')
+                const isNewChat = response.headers.get('x-is-new-chat') === 'true'
+
+                if (isNewChat && returnedChatId && returnedChatId !== chatId) {
+                    // Store the new chat ID
+                    setNewChatId(returnedChatId)
+                    // Update URL
+                    window.history.replaceState({}, '', `/chats/${returnedChatId}`)
+                    // Update active chat in store
+                    setActiveChat(returnedChatId)
                 }
 
                 return response
             }
         }),
-        onFinish: (options) => {
-            // Always refresh the current chat data
-            if (chatId) {
-                queryClient.invalidateQueries({ queryKey: ['chat', chatId] })
+        onFinish: async (options) => {
+            const currentChatId = newChatId || chatId
+
+            // Invalidate queries with the correct chat ID
+            await queryClient.invalidateQueries({ queryKey: ['chats'] })
+            if (currentChatId) {
+                await queryClient.invalidateQueries({ queryKey: ['chat', currentChatId] })
             }
-            // Only invalidate chats list on first message (when creating new chat)
-            // This is handled in the fetch interceptor above
+
             setThinking(false)
         },
         onError: (error) => {
