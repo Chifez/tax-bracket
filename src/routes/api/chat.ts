@@ -108,66 +108,72 @@ export const Route = createFileRoute('/api/chat')({
                     system: systemMessage,
                     messages: convertedMessages,
                     tools: {
-                        generate_financial_chart: tool({
-                            description: 'Generates a financial chart to visualize trends, comparisons, or distributions.',
+                        generate_structured_response: tool({
+                            description: 'Generates a structured response containing an explanation, sections, charts, and stats.',
                             inputSchema: z.object({
-                                id: z.string().describe('Unique chart identifier (e.g., "tax-trend-1")'),
-                                type: z.enum(['line', 'bar', 'area']).describe('Chart type'),
-                                title: z.string().describe('Chart title'),
-                                description: z.string().describe('Brief explanation'),
-                                xKey: z.string().describe('Key for X-axis (e.g., "month")'),
-                                yKeys: z.array(z.string()).describe('Keys for Y-axis series'),
-                                colors: z.array(z.string()).describe('Hex color codes'),
-                                data: z.array(z.record(z.string(), z.union([z.string(), z.number()]))).describe('Data points')
-                            })
-                        }),
-                        generate_financial_breakdown: tool({
-                            description: 'Generates a detailed breakdown section for tax calculations, charges, or deep dives.',
-                            inputSchema: z.object({
-                                id: z.string().describe('Section ID'),
-                                title: z.string().describe('Section heading'),
-                                icon: z.enum(['Calculator', 'CreditCard', 'Activity', 'FileText', 'Zap', 'TrendingUp', 'DollarSign', 'PieChart']),
-                                contents: z.array(z.object({
-                                    type: z.enum(['text', 'list', 'key-value', 'table']),
-                                    content: z.union([z.string(), z.array(z.string()), z.record(z.string(), z.string()), z.array(z.any())])
-                                }))
-                            })
-                        }),
-                        generate_key_stats: tool({
-                            description: 'Generates summary statistics about the analysis.',
-                            inputSchema: z.object({
-                                sources: z.number().optional(),
-                                words: z.number().optional(),
-                                timeSaved: z.string().optional()
+                                explanation: z.string().describe('A very brief, plain-text introduction (max 1 sentence). Do NOT use Markdown.'),
+                                sections: z.array(z.object({
+                                    id: z.string().describe('Section ID'),
+                                    title: z.string().describe('Section heading'),
+                                    icon: z.enum(['Calculator', 'CreditCard', 'Activity', 'FileText', 'Zap', 'TrendingUp', 'DollarSign', 'PieChart']),
+                                    contents: z.array(z.object({
+                                        type: z.enum(['text', 'list', 'key-value', 'table']),
+                                        content: z.union([z.string(), z.array(z.string()), z.record(z.string(), z.string()), z.array(z.any())])
+                                    }))
+                                })).optional().describe('Collapsible detail sections'),
+                                charts: z.array(z.object({
+                                    id: z.string().describe('Unique chart identifier'),
+                                    type: z.enum(['line', 'bar', 'area']),
+                                    title: z.string().describe('Chart title'),
+                                    description: z.string().describe('Brief explanation'),
+                                    xKey: z.string().describe('Key for X-axis (e.g., "month")'),
+                                    yKeys: z.array(z.string()).describe('Keys for Y-axis series'),
+                                    colors: z.array(z.string()).describe('Hex color codes'),
+                                    data: z.array(z.record(z.string(), z.union([z.string(), z.number()]))).describe('Data points')
+                                })).optional().describe('Data visualizations'),
+                                stats: z.object({
+                                    sources: z.number().optional(),
+                                    words: z.number().optional(),
+                                    timeSaved: z.string().optional()
+                                }).optional().describe('Response metadata'),
+                                sources: z.array(z.object({
+                                    id: z.string(),
+                                    name: z.string(),
+                                    type: z.string()
+                                })).optional().describe('Referenced documents')
                             })
                         })
                     },
                     onFinish: async ({ text, toolCalls }) => {
-                        const sections: any[] = [];
-                        const charts: any[] = [];
+                        let sections: any[] = [];
+                        let charts: any[] = [];
                         let stats: any = null;
+                        let sources: any[] = [];
+                        let content = text;
 
                         if (toolCalls) {
                             for (const call of toolCalls) {
-                                const args = (call as any).args || (call as any).input;
-
-                                if (call.toolName === 'generate_financial_chart') {
-                                    charts.push(args);
-                                } else if (call.toolName === 'generate_financial_breakdown') {
-                                    sections.push(args);
-                                } else if (call.toolName === 'generate_key_stats') {
-                                    stats = args;
+                                if (call.toolName === 'generate_structured_response') {
+                                    const args = (call as any).args || (call as any).input;
+                                    content = args.explanation || text; // Use explanation as main content
+                                    if (args.sections) sections = args.sections;
+                                    if (args.charts) charts = args.charts;
+                                    if (args.stats) stats = args.stats;
+                                    if (args.sources) sources = args.sources;
                                 }
                             }
                         }
 
+                        // Fallback: If no tool called (shouldn't happen with strict prompt), use text
+
                         await db.insert(messages).values({
                             chatId,
                             role: 'assistant',
-                            content: text,
+                            content: content,
                             sections: sections.length > 0 ? sections : null,
                             charts: charts.length > 0 ? charts : null,
                             stats: stats,
+                            sources: sources.length > 0 ? sources : null,
                             createdAt: new Date(),
                         })
                     }

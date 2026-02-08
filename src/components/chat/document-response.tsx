@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Message } from '@/types'
 import { cn } from '@/lib/utils'
 import { FinancialChart } from '@/components/charts'
-import { ChevronDown, Check, Loader2 } from 'lucide-react'
+import { ChevronDown, Check } from 'lucide-react'
 import { StepSection, StatsBar } from './document-response/index'
 import type { UIToolInvocation } from 'ai'
 
@@ -28,53 +28,49 @@ interface DocumentResponseProps {
 export function DocumentResponse({ message, className }: DocumentResponseProps) {
     const [isExpanded, setIsExpanded] = useState(true)
 
-    // Extract text content from parts array if available (AI SDK v6)
-    const textContent = message.parts
+    // Live tool invocations (Generative UI)
+    const toolInvocations = message.toolInvocations ?? []
+
+    // 1. Monolithic Tool (New Strategy)
+    const structuredTool = toolInvocations.find(
+        t => (t as any).toolName === 'generate_structured_response' || t.title === 'generate_structured_response'
+    )
+
+    // Extract data from monolithic tool (handles both streaming input and final output)
+    const getStructuredData = () => {
+        if (!structuredTool) return null
+        // Prefer output if available (final state), otherwise use input (streaming state)
+        if (structuredTool.state === 'output-available') return structuredTool.output
+        if (structuredTool.state === 'input-streaming' || structuredTool.state === 'input-available') return structuredTool.input
+        return null
+    }
+
+    const structuredData = getStructuredData()
+
+    // 2. Legacy/Fallback Content
+    // Legacy persisted content or standard text content
+    const legacyTextContent = message.parts
         ?.filter(part => part.type === 'text')
         .map(part => part.text)
         .join('') || message.content || ''
 
-    // Live tool invocations (Generative UI)
-    const toolInvocations = message.toolInvocations ?? []
-
-    // Tool grouping (AI SDK v6 uses `title`, not `toolName`)
-    const sectionTools = toolInvocations.filter(
-        t => t.title === 'generate_financial_breakdown'
-    )
-
-    const chartTools = toolInvocations.filter(
-        t => t.title === 'generate_financial_chart'
-    )
-
-    const statsTool = toolInvocations.find(
-        t => t.title === 'generate_key_stats'
-    )
-
-    // Legacy persisted content
     const legacySections = message.sections ?? []
     const legacyCharts = message.charts ?? []
     const legacyStats = message.stats
 
-    const hasStructuredContent =
-        legacySections.length > 0 ||
-        sectionTools.length > 0 ||
-        legacyCharts.length > 0 ||
-        chartTools.length > 0
+    // 3. Consolidated Data
+    // Use structured tool explanation if available, otherwise legacy text
+    const textContent = structuredData?.explanation || legacyTextContent
 
-    const actionCount =
-        legacySections.length +
-        sectionTools.length +
-        legacyCharts.length +
-        chartTools.length
+    // Combine sections/charts/sources from both sources (though typically only one exists)
+    const sections = structuredData?.sections || legacySections
+    const charts = structuredData?.charts || legacyCharts
+    const stats = structuredData?.stats || legacyStats
+    const sources = structuredData?.sources || message.sources
 
-    const getToolData = (tool?: UIToolInvocation<any>) => {
-        if (!tool) return null
-        if (tool.state === 'output-available') return tool.output
-        if (tool.state === 'input-streaming' || tool.state === 'input-available') return tool.input
-        return null
-    }
+    const hasStructuredContent = sections.length > 0 || charts.length > 0
 
-    const statsData = getToolData(statsTool)
+    const actionCount = sections.length + charts.length
 
     return (
         <div className={cn('flex gap-3', className)}>
@@ -89,9 +85,9 @@ export function DocumentResponse({ message, className }: DocumentResponseProps) 
                                 <Check size={14} className="text-primary" />
                             </div>
                             <div className="text-left">
-                                <span className="font-medium text-sm">Completed</span>
+                                <span className="font-medium text-sm">Analysis Complete</span>
                                 <span className="text-xs text-muted-foreground ml-2">
-                                    Performed {actionCount} actions
+                                    Generated {actionCount} items
                                 </span>
                             </div>
                         </div>
@@ -108,97 +104,43 @@ export function DocumentResponse({ message, className }: DocumentResponseProps) 
                     </button>
                 )}
 
-                {(!hasStructuredContent || isExpanded) && (
-                    <div className="space-y-4">
-                        {/* Text Content */}
-                        {textContent && (
-                            <div className="px-4 text-sm leading-relaxed whitespace-pre-wrap">
-                                {textContent}
-                            </div>
-                        )}
+                {/* Main Content Area */}
+                <div className="space-y-4">
+                    {/* Explanation Text */}
+                    {textContent && (
+                        <div className="px-4 text-sm leading-relaxed whitespace-pre-wrap">
+                            {textContent}
+                        </div>
+                    )}
 
-                        {/* Sections (Legacy) */}
-                        {legacySections.map((section, index) => (
-                            <StepSection
-                                key={section.id}
-                                section={section}
-                                stepNumber={index + 1}
-                                sources={message.sources}
-                            />
-                        ))}
-
-                        {/* Sections (Generative UI) */}
-                        {sectionTools.map((tool, index) => {
-                            const section =
-                                tool.state === 'input-streaming'
-                                    ? tool.input
-                                    : tool.state === 'output-available'
-                                        ? tool.output
-                                        : null
-
-                            if (!section || !section.title) {
-                                return (
-                                    <div
-                                        key={tool.toolCallId}
-                                        className="px-4 py-2 flex items-center gap-2 text-muted-foreground text-sm animate-pulse"
-                                    >
-                                        <Loader2 size={14} className="animate-spin" />
-                                        Generating section...
-                                    </div>
-                                )
-                            }
-
-                            return (
+                    {(!hasStructuredContent || isExpanded) && (
+                        <>
+                            {/* Sections */}
+                            {sections?.map((section: any, index: number) => (
                                 <StepSection
-                                    key={tool.toolCallId}
-                                    section={section as any}
-                                    stepNumber={legacySections.length + index + 1}
-                                    sources={message.sources}
+                                    key={section.id || index}
+                                    section={section}
+                                    stepNumber={index + 1}
+                                    sources={sources}
                                 />
-                            )
-                        })}
+                            ))}
 
-                        {/* Charts (Legacy) */}
-                        {legacyCharts.map(chart => (
-                            <FinancialChart key={chart.id} chart={chart} />
-                        ))}
-
-                        {/* Charts (Generative UI) */}
-                        {chartTools.map(tool => {
-                            const chart =
-                                tool.state === 'input-streaming'
-                                    ? tool.input
-                                    : tool.state === 'output-available'
-                                        ? tool.output
-                                        : null
-
-                            if (!chart || !chart.data) {
-                                return (
-                                    <div
-                                        key={tool.toolCallId}
-                                        className="px-4 py-2 flex items-center gap-2 text-muted-foreground text-sm animate-pulse"
-                                    >
-                                        <Loader2 size={14} className="animate-spin" />
-                                        Generating chart...
-                                    </div>
-                                )
-                            }
-
-                            return (
+                            {/* Charts */}
+                            {charts?.map((chart: any, index: number) => (
                                 <FinancialChart
-                                    key={tool.toolCallId}
-                                    chart={chart as any}
+                                    key={chart.id || index}
+                                    chart={chart}
                                 />
-                            )
-                        })}
-                    </div>
-                )}
+                            ))}
+                        </>
+                    )}
+                </div>
 
                 {/* Stats */}
-                {(legacyStats || statsData) && (
+                {stats && (
                     <StatsBar
-                        stats={statsData ?? legacyStats}
-                        sources={message.sources}
+                        stats={stats}
+                        sources={sources}
                     />
                 )}
 

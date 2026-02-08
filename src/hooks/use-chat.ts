@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai' // Import from 'ai' package
 import type { UIMessage } from 'ai'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 
 export const useChats = () => {
     return useQuery({
@@ -24,7 +24,6 @@ export const useChatData = (chatId: string | null) => {
 }
 
 export const useChatSession = (chatId: string | null, initialMessages: UIMessage[] = []) => {
-    const router = useRouter()
     const queryClient = useQueryClient()
     const { setThinking, setActiveChat } = useChatStore()
     const [newChatId, setNewChatId] = useState<string | null>(null)
@@ -56,20 +55,20 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
                     setNewChatId(returnedChatId)
                     // Update URL
                     window.history.replaceState({}, '', `/chats/${returnedChatId}`)
-                    // Update active chat in store
-                    setActiveChat(returnedChatId)
                 }
 
                 return response
             }
         }),
-        onFinish: async (options) => {
+        onFinish: async (_options) => {
             const currentChatId = newChatId || chatId
 
             // Invalidate queries with the correct chat ID
             await queryClient.invalidateQueries({ queryKey: ['chats'] })
             if (currentChatId) {
                 await queryClient.invalidateQueries({ queryKey: ['chat', currentChatId] })
+                // Update active chat in store only after stream finishes to prevent re-mount
+                setActiveChat(currentChatId)
             }
 
             setThinking(false)
