@@ -14,6 +14,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ChatsChatIdRouteImport } from './routes/chats/$chatId'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google/callback'
 
 const UploadsRoute = UploadsRouteImport.update({
@@ -41,6 +42,11 @@ const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   path: '/auth/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
   id: '/auth/google/callback',
   path: '/auth/google/callback',
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/uploads': typeof UploadsRoute
+  '/api/chat': typeof ApiChatRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/uploads': typeof UploadsRoute
+  '/api/chat': typeof ApiChatRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/uploads': typeof UploadsRoute
+  '/api/chat': typeof ApiChatRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/uploads'
+    | '/api/chat'
     | '/auth/reset-password'
     | '/chats/$chatId'
     | '/auth/google/callback'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/uploads'
+    | '/api/chat'
     | '/auth/reset-password'
     | '/chats/$chatId'
     | '/auth/google/callback'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/uploads'
+    | '/api/chat'
     | '/auth/reset-password'
     | '/chats/$chatId'
     | '/auth/google/callback'
@@ -103,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRoute: typeof SettingsRoute
   UploadsRoute: typeof UploadsRoute
+  ApiChatRoute: typeof ApiChatRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   ChatsChatIdRoute: typeof ChatsChatIdRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
@@ -145,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/google/callback': {
       id: '/auth/google/callback'
       path: '/auth/google/callback'
@@ -159,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRoute,
   UploadsRoute: UploadsRoute,
+  ApiChatRoute: ApiChatRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
   ChatsChatIdRoute: ChatsChatIdRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,

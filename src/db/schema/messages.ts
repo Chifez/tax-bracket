@@ -7,6 +7,7 @@ export const messages = pgTable('messages', {
     role: varchar('role', { length: 50 }).notNull(), // 'user' | 'assistant' | 'system'
     content: text('content').notNull(),
     attachments: json('attachments'), // Array of { name, type, size, url? }
+    fileIds: json('file_ids'), // Array of UUIDs referencing files.id
     sections: json('sections'), // Array of ResponseSection
     charts: json('charts'), // Array of ChartData
     stats: json('stats'), // MessageStats

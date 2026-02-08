@@ -2,22 +2,72 @@ import { useState } from 'react'
 import type { Message } from '@/types'
 import { cn } from '@/lib/utils'
 import { FinancialChart } from '@/components/charts'
-import { ChevronDown, Check } from 'lucide-react'
+import { ChevronDown, Check, Loader2 } from 'lucide-react'
 import { StepSection, StatsBar } from './document-response/index'
+import type { UIToolInvocation } from 'ai'
+
+/**
+ * Extend your persisted Message with live Generative UI tool invocations
+ */
+interface ExtendedMessage extends Partial<Message> {
+    toolInvocations?: UIToolInvocation<any>[]
+    content: string
+    createdAt?: Date | string
+}
 
 interface DocumentResponseProps {
-    message: Message
+    message: ExtendedMessage
     className?: string
 }
 
 /**
  * Structured AI response with collapsible sections, charts, and stats
+ * Supports both legacy persisted JSON columns and active Generative UI tool invocations
  */
 export function DocumentResponse({ message, className }: DocumentResponseProps) {
     const [isExpanded, setIsExpanded] = useState(true)
 
-    const hasStructuredContent = message.sections && message.sections.length > 0
-    const actionCount = message.sections?.length ?? 0
+    // Live tool invocations (Generative UI)
+    const toolInvocations = message.toolInvocations ?? []
+
+    // Tool grouping (AI SDK v6 uses `title`, not `toolName`)
+    const sectionTools = toolInvocations.filter(
+        t => t.title === 'generate_financial_breakdown'
+    )
+
+    const chartTools = toolInvocations.filter(
+        t => t.title === 'generate_financial_chart'
+    )
+
+    const statsTool = toolInvocations.find(
+        t => t.title === 'generate_key_stats'
+    )
+
+    // Legacy persisted content
+    const legacySections = message.sections ?? []
+    const legacyCharts = message.charts ?? []
+    const legacyStats = message.stats
+
+    const hasStructuredContent =
+        legacySections.length > 0 ||
+        sectionTools.length > 0 ||
+        legacyCharts.length > 0 ||
+        chartTools.length > 0
+
+    const actionCount =
+        legacySections.length +
+        sectionTools.length +
+        legacyCharts.length +
+        chartTools.length
+
+    const getToolData = (tool?: UIToolInvocation<any>) => {
+        if (!tool) return null
+        if (tool.state === 'output-available') return tool.output
+        if (tool.state === 'input-streaming' || tool.state === 'input-available') return tool.input
+        return null
+    }
+
+    const statsData = getToolData(statsTool)
 
     return (
         <div className={cn('flex gap-3', className)}>
@@ -52,14 +102,16 @@ export function DocumentResponse({ message, className }: DocumentResponseProps) 
                 )}
 
                 {(!hasStructuredContent || isExpanded) && (
-                    <div className="space-y-1">
-                        {!hasStructuredContent && (
-                            // Only show if there is substantial content to show, otherwise it might be just an empty shell if usage was strictly structured
-                            // But usually there is a summary string.
-                            <div className="px-4 text-sm leading-relaxed">{message.content}</div>
+                    <div className="space-y-4">
+                        {/* Text Content */}
+                        {message.content && (
+                            <div className="px-4 text-sm leading-relaxed whitespace-pre-wrap">
+                                {message.content}
+                            </div>
                         )}
 
-                        {message.sections?.map((section, index) => (
+                        {/* Sections (Legacy) */}
+                        {legacySections.map((section, index) => (
                             <StepSection
                                 key={section.id}
                                 section={section}
@@ -68,21 +120,88 @@ export function DocumentResponse({ message, className }: DocumentResponseProps) 
                             />
                         ))}
 
-                        {message.charts?.map((chart) => (
+                        {/* Sections (Generative UI) */}
+                        {sectionTools.map((tool, index) => {
+                            const section =
+                                tool.state === 'input-streaming'
+                                    ? tool.input
+                                    : tool.state === 'output-available'
+                                        ? tool.output
+                                        : null
+
+                            if (!section || !section.title) {
+                                return (
+                                    <div
+                                        key={tool.toolCallId}
+                                        className="px-4 py-2 flex items-center gap-2 text-muted-foreground text-sm animate-pulse"
+                                    >
+                                        <Loader2 size={14} className="animate-spin" />
+                                        Generating section...
+                                    </div>
+                                )
+                            }
+
+                            return (
+                                <StepSection
+                                    key={tool.toolCallId}
+                                    section={section as any}
+                                    stepNumber={legacySections.length + index + 1}
+                                    sources={message.sources}
+                                />
+                            )
+                        })}
+
+                        {/* Charts (Legacy) */}
+                        {legacyCharts.map(chart => (
                             <FinancialChart key={chart.id} chart={chart} />
                         ))}
+
+                        {/* Charts (Generative UI) */}
+                        {chartTools.map(tool => {
+                            const chart =
+                                tool.state === 'input-streaming'
+                                    ? tool.input
+                                    : tool.state === 'output-available'
+                                        ? tool.output
+                                        : null
+
+                            if (!chart || !chart.data) {
+                                return (
+                                    <div
+                                        key={tool.toolCallId}
+                                        className="px-4 py-2 flex items-center gap-2 text-muted-foreground text-sm animate-pulse"
+                                    >
+                                        <Loader2 size={14} className="animate-spin" />
+                                        Generating chart...
+                                    </div>
+                                )
+                            }
+
+                            return (
+                                <FinancialChart
+                                    key={tool.toolCallId}
+                                    chart={chart as any}
+                                />
+                            )
+                        })}
                     </div>
                 )}
 
-                {message.stats && (
-                    <StatsBar stats={message.stats} sources={message.sources} />
+                {/* Stats */}
+                {(legacyStats || statsData) && (
+                    <StatsBar
+                        stats={statsData ?? legacyStats}
+                        sources={message.sources}
+                    />
                 )}
 
                 <span className="text-[11px] text-muted-foreground pl-1">
-                    {new Date(message.timestamp).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })}
+                    {message.createdAt
+                        ? new Date(message.createdAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        })
+                        : ''}
                 </span>
             </div>
         </div>

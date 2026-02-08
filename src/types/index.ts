@@ -95,6 +95,7 @@ export interface Message {
 
     // Processing state
     isStreaming?: boolean
+    fileIds?: string[]
 }
 
 export interface Chat {

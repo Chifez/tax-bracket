@@ -1,86 +1,63 @@
-import { useState, useRef, useCallback, KeyboardEvent } from 'react'
-import { useChatStore } from '@/stores/chat-store'
-import { useCreateChat, useSendMessage } from '@/hooks/use-chat'
+import { useState, useRef, KeyboardEvent } from 'react'
 import { Button, Textarea } from '@/components/ui'
 import { cn } from '@/lib/utils'
-import { Send, Paperclip, X, FileText, Image } from 'lucide-react'
+import { Send, Paperclip, X, FileText, Image, Square } from 'lucide-react'
 import { useUser } from '@/hooks/use-auth'
 import { toast } from 'sonner'
-import type { MessageAttachment } from '@/types'
 
 interface ChatInputProps {
     disabled?: boolean
     className?: string
+    onSend: (text: string, files?: File[]) => void
+    onStop: () => void
+    isLoading: boolean
+    status: 'submitted' | 'streaming' | 'ready' | 'error'
 }
 
-export function ChatInput({ disabled, className }: ChatInputProps) {
+export function ChatInput({
+    disabled,
+    className,
+    onSend,
+    onStop,
+    isLoading,
+    status
+}: ChatInputProps) {
     const [input, setInput] = useState('')
     const [attachedFiles, setAttachedFiles] = useState<File[]>([])
     const [showAttachMenu, setShowAttachMenu] = useState(false)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const { activeChat, setThinking } = useChatStore()
-    const { mutate: createChat, isPending: isCreating } = useCreateChat()
-    const { mutate: sendMessage, isPending: isSending } = useSendMessage()
     const { data } = useUser()
     const user = data?.user
 
-    const handleSubmit = useCallback(() => {
+    const isProcessing = status === 'streaming' || status === 'submitted'
+
+    const handleSendClick = async () => {
         if (!user) {
             toast.error("You must be logged in to send messages")
             return
         }
 
-        const trimmedInput = input.trim()
-        if (!trimmedInput && attachedFiles.length === 0) return
+        if (!input.trim() && attachedFiles.length === 0) return
 
-        // Create attachments from files
-        const attachments: MessageAttachment[] = attachedFiles.map(file => ({
-            name: file.name,
-            type: file.type,
-            size: file.size,
-        }))
+        onSend(input, attachedFiles.length > 0 ? attachedFiles : undefined)
+        setInput('')
+        setAttachedFiles([])
+    }
 
-        // Optimistic UI updates could be handled here or by React Query
-        setThinking(true)
+    const handleStopClick = () => {
+        onStop()
+    }
 
-        if (!activeChat) {
-            // Create new chat
-            createChat({ message: trimmedInput, attachments }, {
-                onSuccess: () => {
-                    setThinking(false)
-                    setInput('')
-                    setAttachedFiles([])
-                },
-                onError: () => setThinking(false)
-            })
-        } else {
-            // Send message to existing chat
-            sendMessage({
-                chatId: activeChat,
-                content: trimmedInput,
-                role: 'user',
-                attachments
-            }, {
-                onSuccess: () => {
-                    setThinking(false)
-                    setInput('')
-                    setAttachedFiles([])
-                },
-                onError: () => setThinking(false)
-            })
-        }
-    }, [input, attachedFiles, activeChat, createChat, sendMessage, setThinking, user])
-
-    const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+    const onEnter = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey && !isProcessing) {
             e.preventDefault()
-            handleSubmit()
+            handleSendClick()
         }
     }
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || [])
         setAttachedFiles((prev) => [...prev, ...files])
         setShowAttachMenu(false)
@@ -96,18 +73,6 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
             fileInputRef.current.click()
         }
     }
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setInput(e.target.value)
-
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto'
-            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`
-        }
-    }
-
-    const isPending = isCreating || isSending
-    const canSubmit = (input.trim() || attachedFiles.length > 0) && !disabled && !isPending
 
     return (
         <div className={cn('space-y-2', className)}>
@@ -142,7 +107,7 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
                         size="icon"
                         className="h-8 w-8 shrink-0 rounded-lg"
                         onClick={() => setShowAttachMenu(!showAttachMenu)}
-                        disabled={disabled || isPending}
+                        disabled={disabled || isProcessing}
                     >
                         <Paperclip size={16} />
                     </Button>
@@ -171,7 +136,7 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
                     ref={fileInputRef}
                     type="file"
                     className="hidden"
-                    onChange={handleFileSelect}
+                    onChange={handleFileChange}
                     multiple
                 />
 
@@ -179,24 +144,35 @@ export function ChatInput({ disabled, className }: ChatInputProps) {
                 <Textarea
                     ref={textareaRef}
                     value={input}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyDown}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={onEnter}
                     placeholder={disabled ? 'Start a new chat...' : 'Ask a question...'}
-                    disabled={disabled || isPending}
+                    disabled={disabled || isProcessing}
                     className="flex-1 min-h-[36px] max-h-[160px] border-0 bg-transparent resize-none focus-visible:ring-0 focus-visible:ring-offset-0 py-2 text-base md:text-[13px]"
                     rows={1}
                 />
 
-                {/* Send Button */}
-                <Button
-                    type="button"
-                    size="icon"
-                    onClick={handleSubmit}
-                    disabled={!canSubmit}
-                    className="h-8 w-8 shrink-0 rounded-lg"
-                >
-                    <Send size={14} />
-                </Button>
+                {/* Send/Stop Button */}
+                {isProcessing ? (
+                    <Button
+                        type="button"
+                        size="icon"
+                        onClick={handleStopClick}
+                        className="h-8 w-8 shrink-0 rounded-lg bg-red-500 hover:bg-red-600"
+                    >
+                        <Square size={14} />
+                    </Button>
+                ) : (
+                    <Button
+                        type="button"
+                        size="icon"
+                        onClick={handleSendClick}
+                        disabled={(!input.trim() && attachedFiles.length === 0) || disabled}
+                        className="h-8 w-8 shrink-0 rounded-lg"
+                    >
+                        <Send size={14} />
+                    </Button>
+                )}
             </div>
         </div>
     )

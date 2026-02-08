@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { UploadedFile } from '@/types'
+import type { UploadedFile, Message } from '@/types'
 
 interface ChatState {
     // Data - Active Pointer
@@ -13,18 +13,30 @@ interface ChatState {
     isUploading: boolean
     isThinking: boolean
 
+    // Streaming assistant (ephemeral, not persisted)
+    streamingMessage?: Partial<Message>
+
     // Actions
     setActiveChat: (chatId: string | null) => void
 
     // Actions - Files
     addFile: (file: UploadedFile) => void
-    updateFileStatus: (fileId: string, status: UploadedFile['status'], progress?: number) => void
+    updateFileStatus: (
+        fileId: string,
+        status: UploadedFile['status'],
+        progress?: number
+    ) => void
     removeFile: (fileId: string) => void
 
     // Actions - UI
     toggleSidebar: () => void
     setSidebarOpen: (open: boolean) => void
-    setThinking: (thinking: boolean) => void
+
+    // Thinking / Streaming
+    setThinking: (isThinking: boolean) => void
+    setStreamingMessage: (message?: Partial<Message>) => void
+    updateStreamingMessage: (patch: Partial<Message>) => void
+    clearStreamingMessage: () => void
 }
 
 export const useChatStore = create<ChatState>()((set) => ({
@@ -33,6 +45,8 @@ export const useChatStore = create<ChatState>()((set) => ({
     isSidebarOpen: true,
     isUploading: false,
     isThinking: false,
+
+    streamingMessage: undefined,
 
     setActiveChat: (chatId) => {
         set({ activeChat: chatId })
@@ -53,9 +67,14 @@ export const useChatStore = create<ChatState>()((set) => ({
                     ? { ...f, status, progress: progress ?? f.progress }
                     : f
             )
+
             const stillUploading = files.some(
-                (f) => f.status === 'pending' || f.status === 'uploading' || f.status === 'processing'
+                (f) =>
+                    f.status === 'pending' ||
+                    f.status === 'uploading' ||
+                    f.status === 'processing'
             )
+
             return { uploadedFiles: files, isUploading: stillUploading }
         })
     },
@@ -75,7 +94,28 @@ export const useChatStore = create<ChatState>()((set) => ({
         set({ isSidebarOpen: open })
     },
 
-    setThinking: (thinking) => {
-        set({ isThinking: thinking })
+    // Streaming lifecycle
+    setThinking: (isThinking) => {
+        set({ isThinking })
+        if (!isThinking) {
+            set({ streamingMessage: undefined })
+        }
+    },
+
+    setStreamingMessage: (message) => {
+        set({ streamingMessage: message })
+    },
+
+    updateStreamingMessage: (patch) => {
+        set((state) => ({
+            streamingMessage: {
+                ...state.streamingMessage,
+                ...patch,
+            },
+        }))
+    },
+
+    clearStreamingMessage: () => {
+        set({ streamingMessage: undefined })
     },
 }))

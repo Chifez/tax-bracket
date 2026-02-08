@@ -1,9 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
 import { db } from '@/db'
 import { chats, messages } from '@/db/schema'
-import { eq, desc, and } from 'drizzle-orm'
+import { eq, desc, and, gt } from 'drizzle-orm'
 import { getAuthenticatedUser } from '@/server/middleware/auth'
-import { createChatSchema, sendMessageSchema, getChatSchema, deleteChatSchema } from '@/server/validators/chat'
+import { createChatSchema, sendMessageSchema, getChatSchema, deleteChatSchema, editMessageSchema } from '@/server/validators/chat'
 import { notFound, unauthorized } from '@/server/lib/error'
 import { MOCK_RESPONSES } from '@/server/data/mock-responses'
 
@@ -82,15 +82,15 @@ export const getChat = createServerFn()
             chat: {
                 ...chat,
                 messages: chat.messages.map(msg => ({
-                    ...msg,
-                    timestamp: msg.createdAt.toISOString(),
-                    role: msg.role as any,
+                    id: msg.id,
+                    role: msg.role as 'user' | 'assistant',
+                    content: msg.content,
+                    timestamp: msg.createdAt.toISOString(), // Map createdAt to timestamp
                     attachments: msg.attachments as any,
                     sections: msg.sections as any,
                     charts: msg.charts as any,
                     stats: msg.stats as any,
                     sources: msg.sources as any,
-                    metadata: msg.metadata as any
                 }))
             }
         }
@@ -141,15 +141,15 @@ export const createChat = createServerFn({ method: 'POST' })
             chat: {
                 ...newChat,
                 messages: savedMessages.map(msg => ({
-                    ...msg,
+                    id: msg.id,
+                    role: msg.role as 'user' | 'assistant',
+                    content: msg.content,
                     timestamp: msg.createdAt.toISOString(),
-                    role: msg.role as any,
                     attachments: msg.attachments as any,
                     sections: msg.sections as any,
                     charts: msg.charts as any,
                     stats: msg.stats as any,
                     sources: msg.sources as any,
-                    metadata: msg.metadata as any
                 }))
             }
         }
@@ -220,22 +220,23 @@ export const sendMessage = createServerFn({ method: 'POST' })
                     charts: newMessage.charts as any,
                     stats: newMessage.stats as any,
                     sources: newMessage.sources as any,
-                    metadata: newMessage.metadata as any
+                    metadata: newMessage.metadata as any,
+                    fileIds: (newMessage.fileIds as string[]) || []
                 }
             }
         }
 
         return {
             message: {
-                ...newMessage,
+                id: newMessage.id,
+                role: newMessage.role as 'user' | 'assistant',
+                content: newMessage.content,
                 timestamp: newMessage.createdAt.toISOString(),
-                role: newMessage.role as any,
                 attachments: newMessage.attachments as any,
                 sections: newMessage.sections as any,
                 charts: newMessage.charts as any,
-                stats: newMessage.stats as any,
                 sources: newMessage.sources as any,
-                metadata: newMessage.metadata as any
+                fileIds: (newMessage.fileIds as string[]) || []
             }
         }
     })
@@ -254,5 +255,48 @@ export const deleteChat = createServerFn({ method: "POST" })
         await db.delete(chats)
             .where(and(eq(chats.id, data.chatId), eq(chats.userId, user.id)))
 
+        return { success: true }
+    })
+
+/**
+ * Edit a message and delete subsequent history
+ */
+export const editMessage = createServerFn({ method: "POST" })
+    .inputValidator((data: unknown) => editMessageSchema.parse(data))
+    .handler(async ({ data }) => {
+        const user = await getAuthenticatedUser()
+        if (!user) {
+            throw unauthorized()
+        }
+
+        // 1. Verify ownership and get the message to edit
+        const messageToEdit = await db.query.messages.findFirst({
+            where: eq(messages.id, data.messageId),
+            with: {
+                chat: true
+            }
+        })
+
+        if (!messageToEdit) {
+            throw notFound('Message not found')
+        }
+
+        if (messageToEdit.chat.userId !== user.id) {
+            throw unauthorized()
+        }
+
+        // 2. Update the message content
+        await db.update(messages)
+            .set({ content: data.content })
+            .where(eq(messages.id, data.messageId))
+
+        // 3. Delete all subsequent messages (since we need to regenerate)
+        await db.delete(messages)
+            .where(and(
+                eq(messages.chatId, data.chatId),
+                gt(messages.createdAt, messageToEdit.createdAt)
+            ))
+
+        // 4. Return success
         return { success: true }
     })

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { Settings, LogOut } from 'lucide-react'
 import { SidebarNavItems, SidebarChatList, ThemeToggle, SidebarButton, type NavItem, ProfileDropdown } from './sidebar/index'
 import { useUser, useLogout } from '@/hooks/use-auth'
+import { useChats } from '@/hooks/use-chat'
 
 
 interface SidebarProps {
@@ -15,13 +16,8 @@ interface SidebarProps {
 
 }
 
-import { useChats, useCreateChat } from '@/hooks/use-chat'
-
-// ...
-
 export function Sidebar({ className, onNavAction }: SidebarProps) {
     const { isSidebarOpen, activeChat, setActiveChat } = useChatStore()
-    const { mutate: createChat } = useCreateChat()
     const { data: chatsData } = useChats()
     const chats = chatsData?.chats ?? []
 
@@ -32,7 +28,9 @@ export function Sidebar({ className, onNavAction }: SidebarProps) {
 
     const handleNavClick = useCallback((item: NavItem) => {
         if ('action' in item && item.action === 'newChat') {
-            createChat({})
+            // Just navigate to root, which clears activeChat and shows EmptyState
+            setActiveChat(null) // Ensure store state is cleared
+            navigate({ to: '/' })
             return
         }
 
@@ -40,7 +38,7 @@ export function Sidebar({ className, onNavAction }: SidebarProps) {
             const action = 'action' in item ? item.action : item.href
             onNavAction(action)
         }
-    }, [createChat, onNavAction])
+    }, [onNavAction, navigate, setActiveChat])
 
     const handleChatSelect = useCallback((chatId: string) => {
         setActiveChat(chatId)
@@ -87,7 +85,7 @@ export function Sidebar({ className, onNavAction }: SidebarProps) {
 
             <Separator />
 
-            <div className="flex flex-col gap-1 p-2 shrink-0">
+            <div className="flex-col gap-1 p-2 shrink-0 flex">
                 <SidebarButton
                     isCollapsed={!isSidebarOpen}
                     tooltip="Theme"

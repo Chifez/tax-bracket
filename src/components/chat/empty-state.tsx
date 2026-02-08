@@ -1,4 +1,3 @@
-import { useCreateChat } from '@/hooks/use-chat'
 import { Button, Card } from '@/components/ui'
 import { Logo } from '@/components/logo'
 import {
@@ -29,15 +28,13 @@ const exampleQuestions = [
     },
 ]
 
-export function EmptyState() {
-    const { mutateAsync: createChat } = useCreateChat()
+interface EmptyStateProps {
+    onSend: (message: string) => void
+}
 
-    const handleQuestionClick = async (question: string) => {
-        try {
-            await createChat({ message: question })
-        } catch (error) {
-            console.error("Failed to create chat", error)
-        }
+export function EmptyState({ onSend }: EmptyStateProps) {
+    const handleQuestionClick = (question: string) => {
+        onSend(question)
     }
 
     return (

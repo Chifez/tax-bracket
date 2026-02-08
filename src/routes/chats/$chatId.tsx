@@ -1,4 +1,4 @@
-import { createFileRoute, useParams } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { ChatContainer } from '@/components/chat'
 import { useChatStore } from '@/stores/chat-store'
 import { useEffect } from 'react'

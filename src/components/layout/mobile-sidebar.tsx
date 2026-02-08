@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 import { LogOut, MessageSquare, Settings, X } from 'lucide-react'
 import { navItems, type NavItem, ThemeToggle, ProfileDropdown, SidebarButton } from './sidebar/index'
 import { useUser, useLogout } from '@/hooks/use-auth'
+import { useChats } from '@/hooks/use-chat'
+
 
 interface MobileSidebarProps {
     isOpen: boolean
@@ -15,13 +17,8 @@ interface MobileSidebarProps {
 
 }
 
-import { useChats, useCreateChat } from '@/hooks/use-chat'
-
-// ...
-
 export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarProps) {
     const { activeChat, setActiveChat } = useChatStore()
-    const { mutate: createChat } = useCreateChat()
     const { data: chatsData } = useChats()
     const chats = chatsData?.chats ?? []
 
@@ -32,11 +29,8 @@ export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarPro
 
     const handleNavClick = useCallback((item: NavItem) => {
         if ('action' in item && item.action === 'newChat') {
-            createChat({}, {
-                onSuccess: (data) => {
-                    navigate({ to: '/chats/$chatId', params: { chatId: data.chat.id } })
-                }
-            })
+            setActiveChat(null)
+            navigate({ to: '/' })
             onClose()
             return
         } else if (onNavAction) {
@@ -44,7 +38,7 @@ export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarPro
             onNavAction(action)
         }
         onClose()
-    }, [createChat, onClose, onNavAction, navigate])
+    }, [onClose, onNavAction, navigate, setActiveChat])
 
     const handleChatSelect = useCallback((chatId: string) => {
         setActiveChat(chatId)

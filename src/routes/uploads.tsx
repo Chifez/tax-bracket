@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
-import { FileText, Upload, Filter, MoreVertical, Search } from 'lucide-react'
+import { FileText, Upload, MoreVertical, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
@@ -9,7 +9,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useChatStore } from '@/stores/chat-store'
-import { cn } from '@/lib/utils'
 import { useState } from 'react'
 
 export const Route = createFileRoute('/uploads')({
