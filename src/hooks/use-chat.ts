@@ -43,20 +43,31 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
             body: {
                 chatId,
             },
-        }),
-        onData: (dataPart) => {
-            if (dataPart.type === 'data-chat-id') {
-                const newChatId = dataPart.data as string
-                if (newChatId && newChatId !== chatId) {
-                    window.history.replaceState({}, '', `/chats/${newChatId}`)
+            // Add custom fetch to intercept response headers
+            async fetch(url, options) {
+                const response = await fetch(url, options)
+
+                // Only handle new chat creation (when we don't have a chatId yet)
+                if (!chatId) {
+                    const newChatId = response.headers.get('x-chat-id')
+                    if (newChatId) {
+                        // Update URL to new chat
+                        window.history.replaceState({}, '', `/chats/${newChatId}`)
+                        // Refresh sidebar to show new chat
+                        queryClient.invalidateQueries({ queryKey: ['chats'] })
+                    }
                 }
+
+                return response
             }
-        },
+        }),
         onFinish: (options) => {
-            queryClient.invalidateQueries({ queryKey: ['chats'] })
+            // Always refresh the current chat data
             if (chatId) {
                 queryClient.invalidateQueries({ queryKey: ['chat', chatId] })
             }
+            // Only invalidate chats list on first message (when creating new chat)
+            // This is handled in the fetch interceptor above
             setThinking(false)
         },
         onError: (error) => {

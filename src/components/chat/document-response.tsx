@@ -12,6 +12,7 @@ import type { UIToolInvocation } from 'ai'
 interface ExtendedMessage extends Partial<Message> {
     toolInvocations?: UIToolInvocation<any>[]
     content: string
+    parts?: Array<{ type: 'text'; text: string } | { type: 'tool-invocation'; toolInvocation: UIToolInvocation<any> }>
     createdAt?: Date | string
 }
 
@@ -26,6 +27,12 @@ interface DocumentResponseProps {
  */
 export function DocumentResponse({ message, className }: DocumentResponseProps) {
     const [isExpanded, setIsExpanded] = useState(true)
+
+    // Extract text content from parts array if available (AI SDK v6)
+    const textContent = message.parts
+        ?.filter(part => part.type === 'text')
+        .map(part => part.text)
+        .join('') || message.content || ''
 
     // Live tool invocations (Generative UI)
     const toolInvocations = message.toolInvocations ?? []
@@ -104,9 +111,9 @@ export function DocumentResponse({ message, className }: DocumentResponseProps) 
                 {(!hasStructuredContent || isExpanded) && (
                     <div className="space-y-4">
                         {/* Text Content */}
-                        {message.content && (
+                        {textContent && (
                             <div className="px-4 text-sm leading-relaxed whitespace-pre-wrap">
-                                {message.content}
+                                {textContent}
                             </div>
                         )}
 

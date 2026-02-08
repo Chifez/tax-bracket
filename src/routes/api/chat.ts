@@ -28,11 +28,22 @@ export const Route = createFileRoute('/api/chat')({
                 let chatId = existingChatId
 
                 // Helper to safely get string content
+                // Helper to safely get string content from UIMessage
                 const getMessageContent = (message?: UIMessage) => {
                     if (!message) return ''
-                    // Safely check content type
+
+                    // Check for parts array (v6 format) - THIS IS WHAT WAS MISSING
+                    if ('parts' in message && Array.isArray(message.parts)) {
+                        return message.parts
+                            .filter(part => part.type === 'text')
+                            .map(part => part.text)
+                            .join('')
+                    }
+
+                    // Fallback to content property (legacy format)
                     const content = (message as any).content
                     if (typeof content === 'string') return content
+
                     return ''
                 }
 
