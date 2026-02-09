@@ -108,72 +108,92 @@ export const Route = createFileRoute('/api/chat')({
                     system: systemMessage,
                     messages: convertedMessages,
                     tools: {
-                        generate_structured_response: tool({
-                            description: 'Generates a structured response containing an explanation, sections, charts, and stats.',
+                        generate_ui_blocks: tool({
+                            description: 'Generates an ordered list of UI blocks (text, sections, charts, stats) for the response.',
                             inputSchema: z.object({
-                                explanation: z.string().describe('A very brief, plain-text introduction (max 1 sentence). Do NOT use Markdown.'),
-                                sections: z.array(z.object({
-                                    id: z.string().describe('Section ID'),
-                                    title: z.string().describe('Section heading'),
-                                    icon: z.enum(['Calculator', 'CreditCard', 'Activity', 'FileText', 'Zap', 'TrendingUp', 'DollarSign', 'PieChart']),
-                                    contents: z.array(z.object({
-                                        type: z.enum(['text', 'list', 'key-value', 'table']),
-                                        content: z.union([z.string(), z.array(z.string()), z.record(z.string(), z.string()), z.array(z.any())])
-                                    }))
-                                })).optional().describe('Collapsible detail sections'),
-                                charts: z.array(z.object({
-                                    id: z.string().describe('Unique chart identifier'),
-                                    type: z.enum(['line', 'bar', 'area']),
-                                    title: z.string().describe('Chart title'),
-                                    description: z.string().describe('Brief explanation'),
-                                    xKey: z.string().describe('Key for X-axis (e.g., "month")'),
-                                    yKeys: z.array(z.string()).describe('Keys for Y-axis series'),
-                                    colors: z.array(z.string()).describe('Hex color codes'),
-                                    data: z.array(z.record(z.string(), z.union([z.string(), z.number()]))).describe('Data points')
-                                })).optional().describe('Data visualizations'),
-                                stats: z.object({
-                                    sources: z.number().optional(),
-                                    words: z.number().optional(),
-                                    timeSaved: z.string().optional()
-                                }).optional().describe('Response metadata'),
+                                blocks: z.array(z.object({
+                                    type: z.enum(['text', 'section', 'chart', 'stats']).describe('The type of UI block'),
+                                    content: z.string().optional().describe('For text blocks only: Plain text content (NO Markdown)'),
+                                    id: z.string().optional().describe('For section/chart blocks'),
+                                    title: z.string().optional().describe('For section/chart blocks'),
+                                    icon: z.string().optional().describe('For section blocks: Lucide icon name'),
+                                    contents: z.array(z.any()).optional().describe('For section blocks: Array of content items'),
+                                    chartType: z.enum(['line', 'bar', 'area']).optional().describe('For chart blocks'),
+                                    description: z.string().optional().describe('For chart blocks'),
+                                    xKey: z.string().optional().describe('For chart blocks'),
+                                    yKeys: z.array(z.string()).optional().describe('For chart blocks'),
+                                    colors: z.array(z.string()).optional().describe('For chart blocks'),
+                                    data: z.array(z.record(z.string(), z.any())).optional().describe('For chart blocks'),
+                                    sources: z.number().optional().describe('For stats blocks: Number of sources'),
+                                    words: z.number().optional().describe('For stats blocks: Word count'),
+                                    timeSaved: z.string().optional().describe('For stats blocks: Time saved'),
+                                })),
                                 sources: z.array(z.object({
                                     id: z.string(),
-                                    name: z.string(),
-                                    type: z.string()
-                                })).optional().describe('Referenced documents')
+                                    title: z.string(),
+                                    url: z.string(),
+                                    type: z.enum(['pdf', 'csv', 'text'])
+                                })).optional()
                             })
                         })
                     },
-                    onFinish: async ({ text, toolCalls }) => {
-                        let sections: any[] = [];
-                        let charts: any[] = [];
-                        let stats: any = null;
-                        let sources: any[] = [];
-                        let content = text;
-
-                        if (toolCalls) {
-                            for (const call of toolCalls) {
-                                if (call.toolName === 'generate_structured_response') {
-                                    const args = (call as any).args || (call as any).input;
-                                    content = args.explanation || text; // Use explanation as main content
-                                    if (args.sections) sections = args.sections;
-                                    if (args.charts) charts = args.charts;
-                                    if (args.stats) stats = args.stats;
-                                    if (args.sources) sources = args.sources;
-                                }
-                            }
+                    toolChoice: 'required', // Force the model to use the tool
+                    onError: (error) => {
+                        console.error('Generative UI Error:', error)
+                    },
+                    onFinish: async ({ text, toolCalls, usage, finishReason }) => {
+                        console.log('AI Generation Finished:', { text, toolCallsCount: toolCalls?.length, finishReason })
+                        if (toolCalls?.length) {
+                            console.log('Tool Calls:', JSON.stringify(toolCalls, null, 2))
                         }
 
-                        // Fallback: If no tool called (shouldn't happen with strict prompt), use text
+                        // Extract structured data from tool calls
+                        const blockTool = toolCalls?.find(t => t.toolName === 'generate_ui_blocks')
+                        const toolArgs = (blockTool as any)?.args || (blockTool as any)?.input
+
+
+                        const blocks = toolArgs?.blocks || []
+                        const sources = toolArgs?.sources || []
+
+                        // Map legacy fields for backward compatibility/other consumers if needed
+                        // (Optional, but good for safety)
+                        const sections = blocks.filter((b: any) => b.type === 'section').map((b: any) => ({
+                            id: b.id,
+                            title: b.title,
+                            icon: b.icon,
+                            contents: b.contents
+                        }))
+
+                        const charts = blocks.filter((b: any) => b.type === 'chart').map((b: any) => ({
+                            id: b.id,
+                            type: b.chartType,
+                            title: b.title,
+                            description: b.description,
+                            xKey: b.xKey,
+                            yKeys: b.yKeys,
+                            colors: b.colors,
+                            data: b.data
+                        }))
+
+                        const statsBlock = blocks.find((b: any) => b.type === 'stats')
+                        const stats = statsBlock ? {
+                            sources: statsBlock.sources,
+                            words: statsBlock.words,
+                            timeSaved: statsBlock.timeSaved
+                        } : null
 
                         await db.insert(messages).values({
                             chatId,
                             role: 'assistant',
-                            content: content,
+                            content: text || '', // Usually empty for this tool usage
                             sections: sections.length > 0 ? sections : null,
                             charts: charts.length > 0 ? charts : null,
-                            stats: stats,
-                            sources: sources.length > 0 ? sources : null,
+                            stats: (stats || null) as any,
+                            sources: (sources.length > 0 ? sources : null) as any,
+                            metadata: {
+                                blocks: blocks,
+                                sources: sources
+                            } as any,
                             createdAt: new Date(),
                         })
                     }

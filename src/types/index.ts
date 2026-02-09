@@ -35,7 +35,8 @@ export type ResponseMode = 'quick' | 'explained' | 'report'
 export interface Source {
     id: string
     title: string
-    type: 'document' | 'calculation' | 'external'
+    url?: string
+    type: 'document' | 'calculation' | 'external' | 'pdf' | 'csv' | 'text'
     reference?: string
 }
 
@@ -96,6 +97,7 @@ export interface Message {
     // Processing state
     isStreaming?: boolean
     fileIds?: string[]
+    metadata?: any
 }
 
 export interface Chat {

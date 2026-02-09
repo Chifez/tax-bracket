@@ -91,6 +91,7 @@ export const getChat = createServerFn()
                     charts: msg.charts as any,
                     stats: msg.stats as any,
                     sources: msg.sources as any,
+                    metadata: msg.metadata as any,
                 }))
             }
         }
@@ -150,6 +151,7 @@ export const createChat = createServerFn({ method: 'POST' })
                     charts: msg.charts as any,
                     stats: msg.stats as any,
                     sources: msg.sources as any,
+                    metadata: msg.metadata as any,
                 }))
             }
         }
@@ -236,6 +238,7 @@ export const sendMessage = createServerFn({ method: 'POST' })
                 sections: newMessage.sections as any,
                 charts: newMessage.charts as any,
                 sources: newMessage.sources as any,
+                metadata: newMessage.metadata as any,
                 fileIds: (newMessage.fileIds as string[]) || []
             }
         }
