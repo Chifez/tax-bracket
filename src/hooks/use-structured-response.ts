@@ -19,21 +19,6 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
         // 1. Live Tool Invocations (Streaming)
         // Check for the "generate_ui_blocks" tool
         const toolInvocations = message.toolInvocations || []
-        
-        // Debug: Log all tool invocations to understand the structure
-        if (toolInvocations.length > 0) {
-            console.log('🔧 Tool Invocations:', toolInvocations.map((t: any) => ({
-                toolName: t.toolName,
-                state: t.state,
-                hasArgs: !!t.args,
-                hasInput: !!t.input,
-                hasOutput: !!t.output,
-                hasResult: !!t.result,
-                argsKeys: t.args ? Object.keys(t.args) : [],
-                inputKeys: t.input ? Object.keys(t.input) : [],
-            })))
-        }
-        
         const blockTool = toolInvocations.find(
             t => (t as any).toolName === 'generate_ui_blocks' || (t as any).title === 'generate_ui_blocks'
         )

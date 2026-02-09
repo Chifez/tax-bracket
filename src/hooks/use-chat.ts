@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getChats, getChat, deleteChat, editMessage } from '@/server/functions/chat'
-import { useRouter } from '@tanstack/react-router'
+import { useRouter, useNavigate } from '@tanstack/react-router'
 import { useChatStore } from '@/stores/chat-store'
 import { toast } from 'sonner'
 import { useChat } from '@ai-sdk/react'
@@ -25,6 +25,7 @@ export const useChatData = (chatId: string | null) => {
 
 export const useChatSession = (chatId: string | null, initialMessages: UIMessage[] = []) => {
     const queryClient = useQueryClient()
+    const navigate = useNavigate()
     const { setThinking, setActiveChat } = useChatStore()
     const isThinking = useChatStore(state => state.isThinking)
     
@@ -82,8 +83,7 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
                 if (isNewChat && returnedChatId && returnedChatId !== currentEffectiveChatId) {
                     // Update the ref immediately so subsequent requests use the new ID
                     effectiveChatIdRef.current = returnedChatId
-                    // Update URL without triggering full React state change yet
-                    window.history.replaceState({}, '', `/chats/${returnedChatId}`)
+                    // Don't update URL here - will be done in onFinish after streaming completes
                 }
 
                 return response
@@ -102,12 +102,22 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
                 
                 // Update active chat in store AFTER stream finishes
                 setActiveChat(finalChatId)
+                
+                // Navigate to the new chat URL after streaming completes (prevents flickering)
+                // Only navigate if we're not already on this chat's route
+                const currentPath = window.location.pathname
+                const expectedPath = `/chats/${finalChatId}`
+                if (currentPath !== expectedPath) {
+                    navigate({ 
+                        to: '/chats/$chatId', 
+                        params: { chatId: finalChatId },
+                        replace: true 
+                    })
+                }
             }
 
-            // Clear thinking state after a small delay for UI to catch up
-            setTimeout(() => {
-                setThinking(false)
-            }, 300)
+            // Clear thinking state immediately - message is already rendered when onFinish fires
+            setThinking(false)
         },
         onError: (error) => {
             setThinking(false)
