@@ -98,9 +98,15 @@ export function ChatContainer({ className }: ChatContainerProps) {
                                 )
                             )}
 
-                            {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                                <ThinkingAnimation />
-                            )}
+                            {/* Show thinking if loading OR if the last message is from assistant but empty (waiting for blocks) */}
+                            {((isLoading && messages[messages.length - 1]?.role === 'user') ||
+                                (messages[messages.length - 1]?.role === 'assistant' &&
+                                    !(messages[messages.length - 1] as any).content &&
+                                    !(messages[messages.length - 1] as any).toolInvocations?.length &&
+                                    !(messages[messages.length - 1] as any).metadata?.blocks?.length
+                                )) && (
+                                    <ThinkingAnimation />
+                                )}
 
                             <div ref={bottomRef} />
                         </>

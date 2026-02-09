@@ -32,17 +32,10 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
             // and state 'result' -> 'output-available'? (The error listed: input-streaming, input-available, approval-requested, output-available, output-error...)
 
             const t = blockTool as any
-            const data = (t.state === 'result' || t.state === 'output-available' ? (t.output || t.result) : (t.input || t.args)) || {}
-            // Fallback to 'args'/'result' just in case the type definition was the only thing wrong but runtime still has them? 
-            // But actually SDK v6 uses 'args' in some places? No, useChat 'toolInvocations' usually has 'args'.
-            // Wait, the error said property 'args' does not exist on type... 
-            // It said 'input' exists. So we use 'input'.
 
-            // For streaming UI, we often want the 'args' while it's building.
-            // However, 'args' might be partial JSON. 
-            // In strict tool calling, we might only get valid args when fully parsed or partials if using streamText with toolCall streaming.
-
-            // Let's safe guard against partial data if needed, but 'args' usually provides the object.
+            // For streaming: ALWAYS prefer 'input' or 'args' if 'output'/'result' is missing
+            // Vercel AI SDK streams updates to 'args'/'input' in real-time
+            const data = (t.output || t.result) || (t.input || t.args) || {}
 
             const blocks = (data.blocks || []) as UIBlock[]
             const sources = (data.sources || []) as Source[]

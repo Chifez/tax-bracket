@@ -71,7 +71,10 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
                 setActiveChat(currentChatId)
             }
 
-            setThinking(false)
+            // Delay setting thinking to false to allow for UI to catch up with the new message
+            setTimeout(() => {
+                setThinking(false)
+            }, 500)
         },
         onError: (error) => {
             setThinking(false)
@@ -81,9 +84,33 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
 
     const isLoading = status === 'streaming' || status === 'submitted'
 
-    useEffect(() => {
-        setThinking(isLoading)
-    }, [isLoading, setThinking])
+    // We don't want to auto-sync thinking state here because it might flicker
+    // Logic:
+    // 1. onSubmit -> thinking = true (handled by store or component)
+    // 2. onFinish -> thinking = false (handled above)
+    // 3. New chat redirect -> thinking might need to stay true
+
+    // Actually, let's keep it simple: useChat 'isLoading' is the source of truth for the *network* request.
+    // Our store's 'isThinking' is for the *UI* state.
+
+    // For now, let's trust the onFinish handler and the initial state.
+    // If we remove this useEffect, we must ensure setThinking(true) is called when sending.
+    // But useChat doesn't give us an onStart.
+    // The ChatInput calls sendMessage, which is where we should setThinking(true).
+
+    // Let's modify usage in chat-container via the input, or just rely on this effect but make it safer?
+    // User complaint: "goes away 2-3 sec before".
+    // This effect turns it off immediately when isLoading becomes false.
+    // So removing this effect and controlling it manually is better.
+
+    // However, if we remove it, we need to ensure it's set to true.
+    // ChatInput calls sendMessage. 
+    // Let's just comment this out or remove it and rely on the UI checking 'isLoading' directly for the animation,
+    // and only use 'isThinking' for the global state if needed.
+    // In ChatContainer, I updated it to check `isLoading` OR empty assistant message.
+    // So the store `isThinking` might be redundant or causing conflicts.
+
+    // Let's remove this sync effect.
 
     return {
         messages,
