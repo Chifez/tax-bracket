@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai' // Import from 'ai' package
 import type { UIMessage } from 'ai'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 export const useChats = () => {
     return useQuery({
