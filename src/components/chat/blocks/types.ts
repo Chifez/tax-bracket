@@ -57,4 +57,5 @@ export interface Source {
 export interface StructuredResponse {
     blocks: UIBlock[]
     sources?: Source[]
+    isStreaming?: boolean // True when blocks are still being streamed
 }

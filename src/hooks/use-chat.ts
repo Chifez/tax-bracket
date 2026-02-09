@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai' // Import from 'ai' package
 import type { UIMessage } from 'ai'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 export const useChats = () => {
     return useQuery({
@@ -26,34 +26,63 @@ export const useChatData = (chatId: string | null) => {
 export const useChatSession = (chatId: string | null, initialMessages: UIMessage[] = []) => {
     const queryClient = useQueryClient()
     const { setThinking, setActiveChat } = useChatStore()
-    const [newChatId, setNewChatId] = useState<string | null>(null)
+    const isThinking = useChatStore(state => state.isThinking)
+    
+    // Track the current effective chat ID - this is what we send to the API
+    // We use a ref that we update, but also need state to trigger transport recreation
+    const effectiveChatIdRef = useRef<string | null>(chatId)
+    const [currentChatId, setCurrentChatId] = useState<string | null>(chatId)
+    
+    // Sync the ref with prop when chatId changes from external navigation
+    useEffect(() => {
+        if (chatId !== null && chatId !== effectiveChatIdRef.current) {
+            effectiveChatIdRef.current = chatId
+            setCurrentChatId(chatId)
+        }
+    }, [chatId])
 
     const {
         messages,
-        sendMessage,
+        sendMessage: originalSendMessage,
         status,
         setMessages,
         regenerate,
-        stop
+        stop: originalStop
     } = useChat({
-        id: chatId || undefined,
+        // Use currentChatId for hook identity - allows proper message tracking
+        id: currentChatId || 'new-chat',
         messages: initialMessages,
         transport: new DefaultChatTransport({
             api: '/api/chat',
-            body: {
-                chatId,
+            // Use a getter function pattern - read current value at request time
+            get body() {
+                return {
+                    chatId: effectiveChatIdRef.current,
+                }
             },
             async fetch(url, options) {
-
-                const response = await fetch(url, options)
+                // Read the CURRENT value of the ref at fetch time
+                const currentEffectiveChatId = effectiveChatIdRef.current
+                
+                // Parse and update the body with the current chat ID
+                const originalBody = options?.body ? JSON.parse(options.body as string) : {}
+                const updatedBody = {
+                    ...originalBody,
+                    chatId: currentEffectiveChatId,
+                }
+                
+                const response = await fetch(url, {
+                    ...options,
+                    body: JSON.stringify(updatedBody),
+                })
 
                 const returnedChatId = response.headers.get('x-chat-id')
                 const isNewChat = response.headers.get('x-is-new-chat') === 'true'
 
-                if (isNewChat && returnedChatId && returnedChatId !== chatId) {
-                    // Store the new chat ID
-                    setNewChatId(returnedChatId)
-                    // Update URL
+                if (isNewChat && returnedChatId && returnedChatId !== currentEffectiveChatId) {
+                    // Update the ref immediately so subsequent requests use the new ID
+                    effectiveChatIdRef.current = returnedChatId
+                    // Update URL without triggering full React state change yet
                     window.history.replaceState({}, '', `/chats/${returnedChatId}`)
                 }
 
@@ -61,20 +90,24 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
             }
         }),
         onFinish: async (_options) => {
-            const currentChatId = newChatId || chatId
+            const finalChatId = effectiveChatIdRef.current
 
             // Invalidate queries with the correct chat ID
             await queryClient.invalidateQueries({ queryKey: ['chats'] })
-            if (currentChatId) {
-                await queryClient.invalidateQueries({ queryKey: ['chat', currentChatId] })
-                // Update active chat in store only after stream finishes to prevent re-mount
-                setActiveChat(currentChatId)
+            if (finalChatId) {
+                await queryClient.invalidateQueries({ queryKey: ['chat', finalChatId] })
+                
+                // Now sync React state with the ref
+                setCurrentChatId(finalChatId)
+                
+                // Update active chat in store AFTER stream finishes
+                setActiveChat(finalChatId)
             }
 
-            // Delay setting thinking to false to allow for UI to catch up with the new message
+            // Clear thinking state after a small delay for UI to catch up
             setTimeout(() => {
                 setThinking(false)
-            }, 500)
+            }, 300)
         },
         onError: (error) => {
             setThinking(false)
@@ -82,35 +115,22 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
         }
     })
 
-    const isLoading = status === 'streaming' || status === 'submitted'
+    // Wrap sendMessage to immediately set thinking state in the store
+    const sendMessage: typeof originalSendMessage = (options) => {
+        // Set thinking state BEFORE sending - this is the source of truth for UI
+        setThinking(true)
+        return originalSendMessage(options)
+    }
 
-    // We don't want to auto-sync thinking state here because it might flicker
-    // Logic:
-    // 1. onSubmit -> thinking = true (handled by store or component)
-    // 2. onFinish -> thinking = false (handled above)
-    // 3. New chat redirect -> thinking might need to stay true
+    // Wrap stop to clear thinking state
+    const stop = () => {
+        setThinking(false)
+        return originalStop()
+    }
 
-    // Actually, let's keep it simple: useChat 'isLoading' is the source of truth for the *network* request.
-    // Our store's 'isThinking' is for the *UI* state.
-
-    // For now, let's trust the onFinish handler and the initial state.
-    // If we remove this useEffect, we must ensure setThinking(true) is called when sending.
-    // But useChat doesn't give us an onStart.
-    // The ChatInput calls sendMessage, which is where we should setThinking(true).
-
-    // Let's modify usage in chat-container via the input, or just rely on this effect but make it safer?
-    // User complaint: "goes away 2-3 sec before".
-    // This effect turns it off immediately when isLoading becomes false.
-    // So removing this effect and controlling it manually is better.
-
-    // However, if we remove it, we need to ensure it's set to true.
-    // ChatInput calls sendMessage. 
-    // Let's just comment this out or remove it and rely on the UI checking 'isLoading' directly for the animation,
-    // and only use 'isThinking' for the global state if needed.
-    // In ChatContainer, I updated it to check `isLoading` OR empty assistant message.
-    // So the store `isThinking` might be redundant or causing conflicts.
-
-    // Let's remove this sync effect.
+    // isLoading combines hook status with store's isThinking for robustness
+    // isThinking is stable across re-renders, status may reset if hook re-instantiates
+    const isLoading = isThinking || status === 'streaming' || status === 'submitted'
 
     return {
         messages,

@@ -19,42 +19,71 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
         // 1. Live Tool Invocations (Streaming)
         // Check for the "generate_ui_blocks" tool
         const toolInvocations = message.toolInvocations || []
+        
+        // Debug: Log all tool invocations to understand the structure
+        if (toolInvocations.length > 0) {
+            console.log('🔧 Tool Invocations:', toolInvocations.map((t: any) => ({
+                toolName: t.toolName,
+                state: t.state,
+                hasArgs: !!t.args,
+                hasInput: !!t.input,
+                hasOutput: !!t.output,
+                hasResult: !!t.result,
+                argsKeys: t.args ? Object.keys(t.args) : [],
+                inputKeys: t.input ? Object.keys(t.input) : [],
+            })))
+        }
+        
         const blockTool = toolInvocations.find(
             t => (t as any).toolName === 'generate_ui_blocks' || (t as any).title === 'generate_ui_blocks'
         )
 
         if (blockTool) {
-            // Prefer output (final), fallback to input (streaming)
-            // Vercel AI SDK v6+ uses 'state', 'input', 'output'?
-            // Actually, UIToolInvocation might vary. Let's cast to any to be safe if types are fighting,
-            // or use standard ToolInvocation properties if known.
-            // Based on error: 'args' -> 'input', 'result' -> 'output' (maybe?)
-            // and state 'result' -> 'output-available'? (The error listed: input-streaming, input-available, approval-requested, output-available, output-error...)
-
             const t = blockTool as any
-
-            // For streaming: ALWAYS prefer 'input' or 'args' if 'output'/'result' is missing
-            // Vercel AI SDK streams updates to 'args'/'input' in real-time
-            const data = (t.output || t.result) || (t.input || t.args) || {}
+            
+            // Debug: Log the full tool invocation structure
+            console.log('🔧 Block Tool Found:', {
+                toolName: t.toolName,
+                state: t.state,
+                hasArgs: !!t.args,
+                hasInput: !!t.input,
+                hasOutput: !!t.output,
+                hasResult: !!t.result,
+                blocksInArgs: t.args?.blocks?.length,
+                blocksInInput: t.input?.blocks?.length,
+                blocksInOutput: t.output?.blocks?.length,
+            })
+            
+            // Determine streaming state based on tool invocation state
+            // AI SDK v6 states: 'partial-call', 'call', 'result'
+            // AI SDK v5 states: 'input-streaming', 'input-available', 'output-available'
+            const toolState = t.state || ''
+            const isStreaming = !toolState.includes('result') && !toolState.includes('output')
+            
+            // For streaming: prefer 'input' or 'args' when streaming, 'output'/'result' when complete
+            // During streaming, data arrives incrementally in input/args
+            let data: any = {}
+            
+            if (t.output || t.result) {
+                // Tool is complete, use final output
+                data = t.output || t.result
+            } else if (t.input || t.args) {
+                // Tool is streaming, use partial input
+                data = t.input || t.args
+            }
 
             const blocks = (data.blocks || []) as UIBlock[]
             const sources = (data.sources || []) as Source[]
+            
+            console.log('🎨 Rendering blocks:', { count: blocks.length, isStreaming, state: toolState })
 
-            return { blocks, sources }
+            return { blocks, sources, isStreaming }
         }
 
         // 2. Persisted Data (Database)
         // We expect the 'metadata' column to contain the 'blocks' and 'sources'
         // 'message.metadata' comes from the DB schema
         let metadata = message.metadata as any
-
-        // Debug hook logic
-        console.log('useStructuredResponse hook:', {
-            msgId: message.id,
-            hasMetadata: !!metadata,
-            metadataType: typeof metadata,
-            metadataKeys: metadata ? Object.keys(metadata) : []
-        })
 
         if (metadata) {
             // Handle double-serialized JSON if necessary
@@ -67,7 +96,6 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
             }
 
             if (metadata.blocks || metadata.sources) {
-                console.log('Found blocks in metadata:', metadata.blocks?.length)
                 return {
                     blocks: (metadata.blocks || []) as UIBlock[],
                     sources: (metadata.sources || []) as Source[]

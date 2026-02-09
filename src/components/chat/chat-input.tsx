@@ -11,6 +11,7 @@ interface ChatInputProps {
     onSend: (text: string, files?: File[]) => void
     onStop: () => void
     isLoading: boolean
+    isThinking: boolean // From Zustand store - stable across hook re-instantiations
     status: 'submitted' | 'streaming' | 'ready' | 'error'
 }
 
@@ -20,6 +21,7 @@ export function ChatInput({
     onSend,
     onStop,
     isLoading,
+    isThinking,
     status
 }: ChatInputProps) {
     const [input, setInput] = useState('')
@@ -31,7 +33,9 @@ export function ChatInput({
     const { data } = useUser()
     const user = data?.user
 
-    const isProcessing = status === 'streaming' || status === 'submitted'
+    // Use isThinking (from store) OR status for robustness
+    // isThinking is stable even when useChat hook re-instantiates
+    const isProcessing = isThinking || status === 'streaming' || status === 'submitted'
 
     const handleSendClick = async () => {
         if (!user) {

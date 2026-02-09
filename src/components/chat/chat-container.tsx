@@ -15,7 +15,7 @@ interface ChatContainerProps {
 }
 
 export function ChatContainer({ className }: ChatContainerProps) {
-    const { activeChat } = useChatStore()
+    const { activeChat, isThinking } = useChatStore()
 
     const { data: chatData, isLoading: isInitialLoading, refetch } = useChatData(activeChat)
 
@@ -86,7 +86,7 @@ export function ChatContainer({ className }: ChatContainerProps) {
         <div className={cn('flex flex-col h-full bg-background', className)}>
             <ScrollArea className="flex-1 px-4 py-4">
                 <div className="max-w-2xl mx-auto space-y-4">
-                    {!hasMessages && !isInitialLoading ? (
+                    {!hasMessages && !isInitialLoading && !isThinking ? (
                         <EmptyState onSend={(message) => sendMessage({ text: message })} />
                     ) : (
                         <>
@@ -98,15 +98,19 @@ export function ChatContainer({ className }: ChatContainerProps) {
                                 )
                             )}
 
-                            {/* Show thinking if loading OR if the last message is from assistant but empty (waiting for blocks) */}
-                            {((isLoading && messages[messages.length - 1]?.role === 'user') ||
+                            {/* Show thinking animation when:
+                                1. isThinking (from store) is true AND no assistant message is streaming yet
+                                2. isThinking is stable across hook re-instantiations
+                            */}
+                            {isThinking && (
+                                messages.length === 0 || 
+                                messages[messages.length - 1]?.role === 'user' ||
                                 (messages[messages.length - 1]?.role === 'assistant' &&
-                                    !(messages[messages.length - 1] as any).content &&
-                                    !(messages[messages.length - 1] as any).toolInvocations?.length &&
-                                    !(messages[messages.length - 1] as any).metadata?.blocks?.length
-                                )) && (
-                                    <ThinkingAnimation />
-                                )}
+                                    !(messages[messages.length - 1] as any).toolInvocations?.length
+                                )
+                            ) && (
+                                <ThinkingAnimation />
+                            )}
 
                             <div ref={bottomRef} />
                         </>
@@ -120,6 +124,7 @@ export function ChatContainer({ className }: ChatContainerProps) {
                         onSend={handleSendMessage}
                         onStop={stop}
                         isLoading={isLoading}
+                        isThinking={isThinking}
                         status={status}
                         disabled={!activeChat && messages.length > 0}
                     />
