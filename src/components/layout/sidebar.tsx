@@ -28,8 +28,7 @@ export function Sidebar({ className, onNavAction }: SidebarProps) {
 
     const handleNavClick = useCallback((item: NavItem) => {
         if ('action' in item && item.action === 'newChat') {
-            // Just navigate to root, which clears activeChat and shows EmptyState
-            setActiveChat(null) // Ensure store state is cleared
+            // Just navigate to root - the home route's useEffect will clear activeChat
             navigate({ to: '/' })
             return
         }
@@ -38,7 +37,7 @@ export function Sidebar({ className, onNavAction }: SidebarProps) {
             const action = 'action' in item ? item.action : item.href
             onNavAction(action)
         }
-    }, [onNavAction, navigate, setActiveChat])
+    }, [onNavAction, navigate, activeChat])
 
     const handleChatSelect = useCallback((chatId: string) => {
         setActiveChat(chatId)

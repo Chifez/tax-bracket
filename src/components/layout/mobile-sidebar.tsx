@@ -29,7 +29,7 @@ export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarPro
 
     const handleNavClick = useCallback((item: NavItem) => {
         if ('action' in item && item.action === 'newChat') {
-            setActiveChat(null)
+            // Just navigate to root - the home route's useEffect will clear activeChat
             navigate({ to: '/' })
             onClose()
             return
@@ -38,7 +38,7 @@ export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarPro
             onNavAction(action)
         }
         onClose()
-    }, [onClose, onNavAction, navigate, setActiveChat])
+    }, [onClose, onNavAction, navigate])
 
     const handleChatSelect = useCallback((chatId: string) => {
         setActiveChat(chatId)

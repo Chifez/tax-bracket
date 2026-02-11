@@ -4,9 +4,10 @@ import { useRouter, useNavigate } from '@tanstack/react-router'
 import { useChatStore } from '@/stores/chat-store'
 import { toast } from 'sonner'
 import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport } from 'ai' // Import from 'ai' package
+import { DefaultChatTransport } from 'ai'
 import type { UIMessage } from 'ai'
-import { useState, useRef, useEffect } from 'react'
+import { useRef } from 'react'
+import { generateId } from '@/lib/utils'
 
 export const useChats = () => {
     return useQuery({
@@ -29,18 +30,29 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
     const { setThinking, setActiveChat } = useChatStore()
     const isThinking = useChatStore(state => state.isThinking)
     
-    // Track the current effective chat ID - this is what we send to the API
-    // We use a ref that we update, but also need state to trigger transport recreation
-    const effectiveChatIdRef = useRef<string | null>(chatId)
-    const [currentChatId, setCurrentChatId] = useState<string | null>(chatId)
+    // Track pending message processing - read synchronously, no useEffect
+    const pendingMessageRef = useRef<{ processed: boolean; data: any | null }>({ 
+        processed: false, 
+        data: null 
+    })
+    const hasSentPendingMessage = useRef(false)
     
-    // Sync the ref with prop when chatId changes from external navigation
-    useEffect(() => {
-        if (chatId !== null && chatId !== effectiveChatIdRef.current) {
-            effectiveChatIdRef.current = chatId
-            setCurrentChatId(chatId)
+    // Read pending message synchronously during render (once per chatId)
+    if (!pendingMessageRef.current.processed && chatId) {
+        const pendingData = sessionStorage.getItem('pendingMessage')
+        if (pendingData) {
+            try {
+                const parsed = JSON.parse(pendingData)
+                if (parsed.chatId === chatId) {
+                    pendingMessageRef.current.data = parsed
+                    sessionStorage.removeItem('pendingMessage')
+                }
+            } catch (e) {
+                sessionStorage.removeItem('pendingMessage')
+            }
         }
-    }, [chatId])
+        pendingMessageRef.current.processed = true
+    }
 
     const {
         messages,
@@ -50,74 +62,20 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
         regenerate,
         stop: originalStop
     } = useChat({
-        // Use currentChatId for hook identity - allows proper message tracking
-        id: currentChatId || 'new-chat',
+        id: chatId || 'new-chat',
         messages: initialMessages,
         transport: new DefaultChatTransport({
             api: '/api/chat',
-            // Use a getter function pattern - read current value at request time
-            get body() {
-                return {
-                    chatId: effectiveChatIdRef.current,
-                }
-            },
-            async fetch(url, options) {
-                // Read the CURRENT value of the ref at fetch time
-                const currentEffectiveChatId = effectiveChatIdRef.current
-                
-                // Parse and update the body with the current chat ID
-                const originalBody = options?.body ? JSON.parse(options.body as string) : {}
-                const updatedBody = {
-                    ...originalBody,
-                    chatId: currentEffectiveChatId,
-                }
-                
-                const response = await fetch(url, {
-                    ...options,
-                    body: JSON.stringify(updatedBody),
-                })
-
-                const returnedChatId = response.headers.get('x-chat-id')
-                const isNewChat = response.headers.get('x-is-new-chat') === 'true'
-
-                if (isNewChat && returnedChatId && returnedChatId !== currentEffectiveChatId) {
-                    // Update the ref immediately so subsequent requests use the new ID
-                    effectiveChatIdRef.current = returnedChatId
-                    // Don't update URL here - will be done in onFinish after streaming completes
-                }
-
-                return response
-            }
+            body: { chatId }
         }),
-        onFinish: async (_options) => {
-            const finalChatId = effectiveChatIdRef.current
-
-            // Invalidate queries with the correct chat ID
+        onFinish: async () => {
+            // Invalidate queries
             await queryClient.invalidateQueries({ queryKey: ['chats'] })
-            if (finalChatId) {
-                await queryClient.invalidateQueries({ queryKey: ['chat', finalChatId] })
-                
-                // Now sync React state with the ref
-                setCurrentChatId(finalChatId)
-                
-                // Update active chat in store AFTER stream finishes
-                setActiveChat(finalChatId)
-                
-                // Navigate to the new chat URL after streaming completes (prevents flickering)
-                // Only navigate if we're not already on this chat's route
-                const currentPath = window.location.pathname
-                const expectedPath = `/chats/${finalChatId}`
-                if (currentPath !== expectedPath) {
-                    navigate({ 
-                        to: '/chats/$chatId', 
-                        params: { chatId: finalChatId },
-                        replace: true 
-                    })
-                }
+            if (chatId) {
+                await queryClient.invalidateQueries({ queryKey: ['chat', chatId] })
             }
-
-            // Clear thinking state immediately - message is already rendered when onFinish fires
-            setThinking(false)
+            // Clear thinking state
+                setThinking(false)
         },
         onError: (error) => {
             setThinking(false)
@@ -125,11 +83,58 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
         }
     })
 
-    // Wrap sendMessage to immediately set thinking state in the store
-    const sendMessage: typeof originalSendMessage = (options) => {
-        // Set thinking state BEFORE sending - this is the source of truth for UI
+    // Process pending message after hook is ready (no useEffect - runs in render)
+    if (pendingMessageRef.current.data && !hasSentPendingMessage.current && status === 'ready') {
+        hasSentPendingMessage.current = true
+        const { chatId: _, ...messageOptions } = pendingMessageRef.current.data
+        
+        // Schedule after current render completes
+        queueMicrotask(() => {
+            setThinking(true)
+            originalSendMessage(messageOptions)
+        })
+    }
+
+    // Wrap sendMessage to handle new chat creation with optimistic UI
+    const sendMessage: typeof originalSendMessage = (options, requestOptions) => {
+        if (!chatId) {
+            // New chat flow - optimistic navigation
+            const newChatId = generateId()
+            
+            // Extract text from the options (could be in different shapes)
+            const messageText = options && 'text' in options ? options.text : ''
+            
+            // Create optimistic user message for immediate display
+            const optimisticMessage = {
+                id: generateId(),
+                role: 'user' as const,
+                parts: [{ type: 'text' as const, text: messageText || '' }],
+            }
+            
+            // 1. Add optimistic message to local state FIRST
+            setMessages([optimisticMessage as UIMessage])
+            
+            // 2. Store message options for the new route to pick up
+            sessionStorage.setItem('pendingMessage', JSON.stringify({
+                chatId: newChatId,
+                ...options
+            }))
+            
+            // 3. Update store and navigate immediately (synchronous, no flicker)
+            setActiveChat(newChatId)
+            navigate({ 
+                to: '/chats/$chatId', 
+                params: { chatId: newChatId },
+                replace: true 
+            })
+            
+            // Return resolved promise to match the expected type
+            return Promise.resolve()
+        }
+        
+        // Existing chat flow
         setThinking(true)
-        return originalSendMessage(options)
+        return originalSendMessage(options, requestOptions)
     }
 
     // Wrap stop to clear thinking state
@@ -139,7 +144,6 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
     }
 
     // isLoading combines hook status with store's isThinking for robustness
-    // isThinking is stable across re-renders, status may reset if hook re-instantiates
     const isLoading = isThinking || status === 'streaming' || status === 'submitted'
 
     return {

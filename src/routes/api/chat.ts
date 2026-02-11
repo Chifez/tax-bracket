@@ -25,9 +25,6 @@ export const Route = createFileRoute('/api/chat')({
                     fileIds?: string[]
                 }
 
-                let chatId = existingChatId
-                const isNewChat = !existingChatId // Track if this is a new chat
-
                 // Helper to safely get string content from UIMessage
                 const getMessageContent = (message?: UIMessage) => {
                     if (!message) return ''
@@ -48,7 +45,32 @@ export const Route = createFileRoute('/api/chat')({
                 }
 
                 // 1. Create or Get Chat
-                if (!chatId) {
+                // Client may provide a UUID for optimistic navigation - we create the chat with that ID
+                let chatId = existingChatId
+                let isNewChat = false
+
+                if (chatId) {
+                    // Check if chat exists
+                    const existingChat = await db.query.chats.findFirst({
+                        where: and(eq(chats.id, chatId), eq(chats.userId, user.id))
+                    })
+                    
+                    if (!existingChat) {
+                        // Client-provided UUID for new chat - create with that ID
+                        isNewChat = true
+                        const firstUserMsg = incomingMessages.find(m => m.role === 'user')
+                        const firstContent = getMessageContent(firstUserMsg)
+                        const titleContent = legacyContent || (firstContent || 'New Chat')
+                        
+                        await db.insert(chats).values({
+                            id: chatId, // Use client-provided UUID
+                            userId: user.id,
+                            title: titleContent.slice(0, 50),
+                        })
+                    }
+                } else {
+                    // No chatId provided - generate server-side (fallback for legacy clients)
+                    isNewChat = true
                     const firstUserMsg = incomingMessages.find(m => m.role === 'user')
                     const firstContent = getMessageContent(firstUserMsg)
                     const titleContent = legacyContent || (firstContent || 'New Chat')
@@ -58,11 +80,6 @@ export const Route = createFileRoute('/api/chat')({
                         title: titleContent.slice(0, 50),
                     }).returning()
                     chatId = newChat.id
-                } else {
-                    const chat = await db.query.chats.findFirst({
-                        where: and(eq(chats.id, chatId), eq(chats.userId, user.id))
-                    })
-                    if (!chat) return new Response('Chat not found', { status: 404 })
                 }
 
                 // 2. Save User Message
