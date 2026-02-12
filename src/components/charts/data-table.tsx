@@ -103,7 +103,7 @@ export const DataTable = memo(function DataTable({
                                 key={rowIdx}
                                 className={cn(
                                     'transition-colors group',
-                                    'hover:bg-primary/[0.04]',
+                                    'hover:bg-primary/4',
                                     rowIdx % 2 === 1 && 'bg-muted/20',
                                     fixedColumn && 'z-40',
                                 )}
@@ -122,7 +122,7 @@ export const DataTable = memo(function DataTable({
                                                 isFixed && rowIdx % 2 === 0 && 'bg-card',
                                                 isFixed && rowIdx % 2 === 1 && 'bg-card',
 
-                                                isFixed && 'after:absolute after:inset-0 after:bg-primary/[0.04] after:opacity-0 group-hover:after:opacity-100 after:pointer-events-none after:transition-opacity',
+                                                isFixed && 'after:absolute after:inset-0 after:bg-primary/4 after:opacity-0 group-hover:after:opacity-100 after:pointer-events-none after:transition-opacity',
                                                 isNumber && 'text-right tabular-nums',
                                             )}
                                             style={isFixed
