@@ -1,5 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ChatContainer } from '@/components/chat'
+import { useEffect } from 'react'
+import { useChatStore } from '@/stores/chat-store'
 
 export const Route = createFileRoute('/')({
   component: HomePage,
@@ -11,8 +13,7 @@ export const Route = createFileRoute('/')({
   })
 })
 
-import { useEffect } from 'react'
-import { useChatStore } from '@/stores/chat-store'
+
 
 function HomePage() {
   const setActiveChat = useChatStore(state => state.setActiveChat)
