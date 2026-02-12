@@ -1,10 +1,12 @@
 import { getQueue, QUEUE_NAMES } from '@/server/lib/queue'
 import { db } from '@/db'
-import { files } from '@/db/schema'
+import { files, transactions } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { s3Client } from '@/server/lib/s3'
 import { parseFile } from '@/server/lib/parser'
+import { normalizeRows } from '@/server/lib/normalizer'
+import { deduplicateBatch, deduplicateAgainstExisting, generateTransactionHash } from '@/server/lib/deduplicator'
 import { Readable } from 'stream'
 
 export async function startFileProcessor() {
@@ -13,8 +15,7 @@ export async function startFileProcessor() {
     console.log(`Starting worker for ${QUEUE_NAMES.PARSE_FILE}...`)
 
     await queue.work(QUEUE_NAMES.PARSE_FILE, async (job: any) => {
-        const { fileId, key, bucket, mimeType } = job.data
-
+        const { fileId, key, bucket, mimeType, userId, taxYear, batchId, bankName } = job.data
 
         console.log(`Processing file ${fileId} (${mimeType})...`)
 
@@ -43,17 +44,78 @@ export async function startFileProcessor() {
             }
             const buffer = Buffer.concat(chunks)
 
-            // 3. Parse
-            const extractedText = await parseFile(buffer, mimeType)
+            // 3. Parse file into structured data
+            const parsed = await parseFile(buffer, mimeType)
 
-            // 4. Update DB
+            // 4. Normalize rows into canonical transactions
+            const normalized = normalizeRows(parsed.rows, parsed.headers, bankName || null)
+
+            console.log(`  Parsed ${parsed.rows.length} rows → ${normalized.length} normalized transactions`)
+
+            // 5. Deduplicate within batch
+            const batchDedup = deduplicateBatch(normalized)
+            console.log(`  In-batch dedup: ${batchDedup.duplicateCount} duplicates removed`)
+
+            // 6. Deduplicate against existing DB transactions for this user+year
+            let uniqueTransactions = batchDedup.unique
+            if (uniqueTransactions.length > 0 && userId && taxYear) {
+                const existingRows = await db.select({ hash: transactions.deduplicationHash })
+                    .from(transactions)
+                    .where(eq(transactions.userId, userId))
+
+                const existingHashes = new Set(existingRows.map(r => r.hash))
+                const dbDedup = deduplicateAgainstExisting(uniqueTransactions, existingHashes)
+                console.log(`  Cross-file dedup: ${dbDedup.duplicateCount} duplicates removed`)
+                uniqueTransactions = dbDedup.unique
+            }
+
+            // 7. Insert transactions into DB
+            if (uniqueTransactions.length > 0 && userId) {
+                const txRecords = uniqueTransactions.map(tx => ({
+                    userId,
+                    fileId,
+                    batchId: batchId || null,
+                    taxYear: taxYear || tx.date.getFullYear(),
+                    date: tx.date,
+                    description: tx.description,
+                    amount: tx.amount.toFixed(2),
+                    direction: tx.direction as 'credit' | 'debit',
+                    category: tx.category,
+                    subCategory: tx.subCategory,
+                    currency: tx.currency,
+                    bankName: tx.bankName,
+                    rawDescription: tx.rawDescription,
+                    normalizedDescription: tx.description,
+                    deduplicationHash: generateTransactionHash(tx),
+                }))
+
+                // Insert in batches of 100 to avoid query size limits
+                const BATCH_SIZE = 100
+                for (let i = 0; i < txRecords.length; i += BATCH_SIZE) {
+                    const batch = txRecords.slice(i, i + BATCH_SIZE)
+                    await db.insert(transactions).values(batch)
+                }
+
+                console.log(`  Inserted ${uniqueTransactions.length} transactions`)
+            }
+
+            // 8. Update file record
             await db.update(files)
                 .set({
                     status: 'completed',
-                    extractedText,
+                    extractedText: parsed.rawText,
                     updatedAt: new Date()
                 })
                 .where(eq(files.id, fileId))
+
+            // 9. Queue aggregation if we have transactions
+            if (uniqueTransactions.length > 0 && userId && taxYear) {
+                await queue.send(QUEUE_NAMES.COMPUTE_AGGREGATES, {
+                    userId,
+                    taxYear,
+                    batchId,
+                })
+            }
 
             console.log(`File ${fileId} processed successfully.`)
 

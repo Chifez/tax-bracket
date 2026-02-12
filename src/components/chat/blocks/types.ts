@@ -42,8 +42,18 @@ export interface StatsBlock {
     timeSaved?: string
 }
 
+// --- 5. Data Table Block ---
+export interface DataTableBlock {
+    type: 'data-table'
+    id: string
+    title: string
+    description?: string
+    columns: string[]
+    rows: (string | number)[][]
+}
+
 // --- Base Union ---
-export type UIBlock = TextBlock | SectionBlock | ChartBlock | StatsBlock
+export type UIBlock = TextBlock | SectionBlock | ChartBlock | StatsBlock | DataTableBlock
 
 // --- Source Model ---
 export interface Source {

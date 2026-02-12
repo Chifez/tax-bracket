@@ -84,7 +84,7 @@ export function ChatContainer({ className }: ChatContainerProps) {
 
     return (
         <div className={cn('flex flex-col h-full bg-background', className)}>
-            <ScrollArea className="flex-1 px-4 py-4">
+            <ScrollArea className="flex-1 px-4 py-4 max-sm:pt-14">
                 <div className="max-w-2xl mx-auto space-y-4">
                     {!hasMessages && !isInitialLoading && !isThinking ? (
                         <EmptyState onSend={(message) => sendMessage({ text: message })} />
@@ -103,14 +103,14 @@ export function ChatContainer({ className }: ChatContainerProps) {
                                 2. isThinking is stable across hook re-instantiations
                             */}
                             {isThinking && (
-                                messages.length === 0 || 
+                                messages.length === 0 ||
                                 messages[messages.length - 1]?.role === 'user' ||
                                 (messages[messages.length - 1]?.role === 'assistant' &&
                                     !(messages[messages.length - 1] as any).toolInvocations?.length
                                 )
                             ) && (
-                                <ThinkingAnimation />
-                            )}
+                                    <ThinkingAnimation />
+                                )}
 
                             <div ref={bottomRef} />
                         </>

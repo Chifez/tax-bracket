@@ -19,4 +19,6 @@ export const getQueue = async () => {
 
 export const QUEUE_NAMES = {
     PARSE_FILE: 'parse-file',
+    COMPUTE_AGGREGATES: 'compute-aggregates',
+    BUILD_CONTEXT: 'build-context',
 }

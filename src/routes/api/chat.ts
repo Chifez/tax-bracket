@@ -2,8 +2,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { streamText, tool, convertToModelMessages, UIMessage } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { db } from '@/db'
-import { chats, messages, files } from '@/db/schema'
-import { eq, and, inArray } from 'drizzle-orm'
+import { chats, messages, taxContext } from '@/db/schema'
+import { eq, and } from 'drizzle-orm'
 import { getAuthenticatedUser } from '@/server/middleware/auth'
 import { generateChatTitle } from '@/server/functions/ai'
 import { z } from 'zod'
@@ -54,14 +54,14 @@ export const Route = createFileRoute('/api/chat')({
                     const existingChat = await db.query.chats.findFirst({
                         where: and(eq(chats.id, chatId), eq(chats.userId, user.id))
                     })
-                    
+
                     if (!existingChat) {
                         // Client-provided UUID for new chat - create with that ID
                         isNewChat = true
                         const firstUserMsg = incomingMessages.find(m => m.role === 'user')
                         const firstContent = getMessageContent(firstUserMsg)
                         const titleContent = legacyContent || (firstContent || 'New Chat')
-                        
+
                         await db.insert(chats).values({
                             id: chatId, // Use client-provided UUID
                             userId: user.id,
@@ -96,22 +96,24 @@ export const Route = createFileRoute('/api/chat')({
                     })
                 }
 
-                // 3. Context & Files
-                let fileContext = ""
-                const hasFiles = currentFileIds.length > 0
-                if (hasFiles) {
-                    const fileRecords = await db.query.files.findMany({
-                        where: inArray(files.id, currentFileIds),
-                        columns: { extractedText: true, metadata: true }
-                    })
+                // 3. Fetch compact tax context from DB (never send raw files)
+                const currentYear = new Date().getFullYear()
+                const contextRow = await db.select()
+                    .from(taxContext)
+                    .where(
+                        and(
+                            eq(taxContext.userId, user.id),
+                            eq(taxContext.taxYear, currentYear),
+                        )
+                    )
+                    .limit(1)
 
-                    fileContext = fileRecords.map((f) =>
-                        `File: ${f.metadata?.originalName}\nContent:\n${f.extractedText?.slice(0, 10000)}...`
-                    ).join('\n\n')
-                }
+                const compactContext = contextRow.length > 0
+                    ? contextRow[0].contextJson as import('@/db/schema/tax-context').CompactTaxContext
+                    : null
 
                 // 4. Generate AI Response
-                const systemMessage = systemPrompt(fileContext)
+                const systemMessage = systemPrompt(compactContext)
 
                 // Generate title for new chats
                 if (isNewChat && incomingMessages.length <= 1) {
@@ -126,21 +128,23 @@ export const Route = createFileRoute('/api/chat')({
                     messages: convertedMessages,
                     tools: {
                         generate_ui_blocks: tool({
-                            description: 'Generates an ordered list of UI blocks (text, sections, charts, stats) for the response.',
+                            description: 'Generates an ordered list of UI blocks (text, sections, charts, data tables, stats) for the response. Use data-table blocks for tabular data like transaction lists, tax breakdowns, and comparisons.',
                             inputSchema: z.object({
                                 blocks: z.array(z.object({
-                                    type: z.enum(['text', 'section', 'chart', 'stats']).describe('The type of UI block'),
+                                    type: z.enum(['text', 'section', 'chart', 'data-table', 'stats']).describe('The type of UI block. Use data-table for tabular data.'),
                                     content: z.string().optional().describe('For text blocks only: Plain text content (NO Markdown)'),
-                                    id: z.string().optional().describe('For section/chart blocks'),
-                                    title: z.string().optional().describe('For section/chart blocks'),
+                                    id: z.string().optional().describe('For section/chart/data-table blocks'),
+                                    title: z.string().optional().describe('For section/chart/data-table blocks'),
                                     icon: z.string().optional().describe('For section blocks: Lucide icon name'),
                                     contents: z.array(z.any()).optional().describe('For section blocks: Array of content items'),
                                     chartType: z.enum(['line', 'bar', 'area']).optional().describe('For chart blocks'),
-                                    description: z.string().optional().describe('For chart blocks'),
+                                    description: z.string().optional().describe('For chart/data-table blocks'),
                                     xKey: z.string().optional().describe('For chart blocks'),
                                     yKeys: z.array(z.string()).optional().describe('For chart blocks'),
                                     colors: z.array(z.string()).optional().describe('For chart blocks'),
                                     data: z.array(z.record(z.string(), z.any())).optional().describe('For chart blocks'),
+                                    columns: z.array(z.string()).optional().describe('For data-table blocks: Column header names'),
+                                    rows: z.array(z.array(z.union([z.string(), z.number()]))).optional().describe('For data-table blocks: Array of row data, each row is an array of cell values matching columns order'),
                                     sources: z.number().optional().describe('For stats blocks: Number of sources'),
                                     words: z.number().optional().describe('For stats blocks: Word count'),
                                     timeSaved: z.string().optional().describe('For stats blocks: Time saved'),

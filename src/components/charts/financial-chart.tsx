@@ -29,7 +29,7 @@ export const FinancialChart = memo(function FinancialChart({ chart, className }:
     const seriesCount = seriesKeys.length
 
     return (
-        <Card className={cn('overflow-hidden mx-2 py-2', className)}>
+        <Card className={cn('overflow-hidden mx-2 py-2 max-w-[calc(100vw-2rem)]', className)}>
             <div className="p-4 pb-3 border-b bg-muted/30">
                 <div className="flex items-start justify-between">
                     <div>

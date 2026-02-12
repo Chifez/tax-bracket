@@ -1,7 +1,7 @@
 import { StepSection } from '../document-response/step-section'
-import { FinancialChart } from '@/components/charts'
+import { FinancialChart, DataTable } from '@/components/charts'
 import { StatsBar } from '../document-response/stats-bar'
-import type { UIBlock, TextBlock, SectionBlock, ChartBlock, StatsBlock, Source } from './types'
+import type { UIBlock, TextBlock, SectionBlock, ChartBlock, StatsBlock, DataTableBlock, Source } from './types'
 import { cn } from '@/lib/utils'
 
 // --- Sub-Components ---
@@ -14,7 +14,7 @@ interface TextRendererProps {
 function TextRenderer({ block, isStreaming }: TextRendererProps) {
     // Handle partial content during streaming
     if (!block.content && !isStreaming) return null
-    
+
     return (
         <div className={cn(
             "px-4 text-sm leading-relaxed whitespace-pre-wrap max-w-none transition-opacity duration-200",
@@ -44,7 +44,7 @@ function SectionRenderer({ block, index, sources, isStreaming }: SectionRenderer
         icon: block.icon || 'FileText',
         contents: block.contents || []
     }
-    
+
     return (
         <div className={cn(isStreaming && "animate-pulse")}>
             <StepSection
@@ -75,7 +75,7 @@ function ChartRenderer({ block, isStreaming }: ChartRendererProps) {
         }
         return null
     }
-    
+
     // Adapter to match FinancialChart props with safe fallbacks
     const chartData = {
         id: block.id || 'chart',
@@ -115,6 +115,40 @@ function StatsRenderer({ block, sources, isStreaming }: StatsRendererProps) {
     )
 }
 
+// --- Data Table Renderer ---
+
+interface DataTableRendererProps {
+    block: DataTableBlock
+    isStreaming?: boolean
+}
+
+function DataTableRenderer({ block, isStreaming }: DataTableRendererProps) {
+    // Wait for columns and rows before rendering
+    if (!block.columns || !Array.isArray(block.columns) || block.columns.length === 0) {
+        if (isStreaming) {
+            return (
+                <div className="px-4 py-8 bg-muted/30 rounded-lg animate-pulse">
+                    <div className="text-sm text-muted-foreground text-center">
+                        Loading table data...
+                    </div>
+                </div>
+            )
+        }
+        return null
+    }
+
+    return (
+        <div className={cn(isStreaming && "animate-pulse")}>
+            <DataTable
+                title={block.title || 'Table'}
+                description={block.description}
+                columns={block.columns}
+                rows={block.rows || []}
+            />
+        </div>
+    )
+}
+
 // --- Main Block Renderer ---
 
 interface BlockRendererProps {
@@ -136,7 +170,7 @@ export function BlockRenderer({ block, index, sources, isStreaming }: BlockRende
         }
         return null
     }
-    
+
     switch (block.type) {
         case 'text':
             return <TextRenderer block={block} isStreaming={isStreaming} />
@@ -144,6 +178,8 @@ export function BlockRenderer({ block, index, sources, isStreaming }: BlockRende
             return <SectionRenderer block={block} index={index} sources={sources} isStreaming={isStreaming} />
         case 'chart':
             return <ChartRenderer block={block} isStreaming={isStreaming} />
+        case 'data-table':
+            return <DataTableRenderer block={block} isStreaming={isStreaming} />
         case 'stats':
             return <StatsRenderer block={block} sources={sources} isStreaming={isStreaming} />
         default:

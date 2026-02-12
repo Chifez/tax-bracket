@@ -50,29 +50,27 @@ export const registerFile = createServerFn({ method: "POST" })
         if (!user) throw unauthorized()
 
         // Construct the public URL
-        // If CLOUDFLARE_BUCKET_DOMAIN is set, use it (custom domain).
-        // Otherwise, fallback to R2 dev URL structure (though usually requires auth or public bucket).
-        // For private buckets, we might need a presigned GET url, but here we are storing a "permanent" URL.
-        // Assuming the bucket is public or we have a worker.
         const baseUrl = CLOUDFLARE.R2.BUCKET_DOMAIN
             ? (CLOUDFLARE.CONFIGS.BUCKET_DOMAIN ? `https://${CLOUDFLARE.CONFIGS.BUCKET_DOMAIN}` : `${CLOUDFLARE.R2.BUCKET_DOMAIN}/${CLOUDFLARE.R2.BUCKET}`)
             : `https://${CLOUDFLARE.R2.BUCKET}.r2.cloudflarestorage.com`
-
-        // Fix: If using custom domain, the format is usually https://custom.domain.com/key
-        // If using R2.dev (subdomain), it's https://pub-<hash>.r2.dev/key -> this is for public access enabled.
-        // The user provided config implies `CLOUDFLARE_BUCKET_DOMAIN` might be the custom domain.
 
         const publicUrl = process.env.CLOUDFLARE_BUCKET_DOMAIN
             ? `${process.env.CLOUDFLARE_BUCKET_DOMAIN}/${data.key}`
             : `${baseUrl}/${data.key}`
 
+        // Default tax year to current year
+        const taxYear = data.taxYear || new Date().getFullYear()
+
         // 1. Create file record
         const [newFile] = await db.insert(files).values({
-            id: uuidv4(), // Or allow client to pass ID if consistent
+            id: uuidv4(),
             userId: user.id,
             chatId: data.chatId || null,
+            batchId: data.batchId || null,
             url: publicUrl,
             status: 'pending',
+            taxYear,
+            bankName: data.bankName || null,
             metadata: {
                 originalName: data.filename,
                 mimeType: data.contentType,
@@ -81,13 +79,17 @@ export const registerFile = createServerFn({ method: "POST" })
             }
         }).returning()
 
-        // 2. Add to Queue
+        // 2. Add to Queue with all context for the pipeline
         const queue = await getQueue()
         await queue.send(QUEUE_NAMES.PARSE_FILE, {
             fileId: newFile.id,
             key: data.key,
             bucket: CLOUDFLARE.R2.BUCKET,
-            mimeType: data.contentType
+            mimeType: data.contentType,
+            userId: user.id,
+            taxYear,
+            batchId: data.batchId || null,
+            bankName: data.bankName || null,
         })
 
         return { file: newFile }

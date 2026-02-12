@@ -11,5 +11,8 @@ export const registerFileSchema = z.object({
     filename: z.string().min(1),
     contentType: z.string().min(1),
     size: z.number().positive(),
-    chatId: z.string().optional(), // If tied to a specific chat immediately
+    chatId: z.string().optional(),
+    taxYear: z.number().int().min(2000).max(2100).optional(),
+    batchId: z.string().uuid().optional(),
+    bankName: z.string().optional(),
 })
