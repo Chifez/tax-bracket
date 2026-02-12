@@ -7,7 +7,13 @@ import { User, Settings as SettingsIcon, Shield, Bell } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export const Route = createFileRoute('/settings')({
-  component: SettingsPage
+  component: SettingsPage,
+  head: () => ({
+    meta: [
+      { title: 'Settings | TaxBracket' },
+      { name: 'description', content: 'Manage your account settings and preferences.' },
+    ]
+  })
 })
 
 function SettingsPage() {

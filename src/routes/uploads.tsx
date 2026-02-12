@@ -23,7 +23,13 @@ import {
 } from '@/hooks/use-uploads'
 
 export const Route = createFileRoute('/uploads')({
-  component: UploadsPage
+  component: UploadsPage,
+  head: () => ({
+    meta: [
+      { title: 'Uploads | TaxBracket' },
+      { name: 'description', content: 'Upload bank statements and manage your financial documents.' },
+    ]
+  })
 })
 
 // -------------------------------------------------------------------

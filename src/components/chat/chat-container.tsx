@@ -98,10 +98,7 @@ export function ChatContainer({ className }: ChatContainerProps) {
                                 )
                             )}
 
-                            {/* Show thinking animation when:
-                                1. isThinking (from store) is true AND no assistant message is streaming yet
-                                2. isThinking is stable across hook re-instantiations
-                            */}
+
                             {isThinking && (
                                 messages.length === 0 ||
                                 messages[messages.length - 1]?.role === 'user' ||
@@ -123,7 +120,7 @@ export function ChatContainer({ className }: ChatContainerProps) {
                     <ChatInput
                         onSend={handleSendMessage}
                         onStop={stop}
-                        isLoading={isLoading}
+
                         isThinking={isThinking}
                         status={status}
                         disabled={!activeChat && messages.length > 0}

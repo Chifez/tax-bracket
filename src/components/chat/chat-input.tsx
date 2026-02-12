@@ -10,7 +10,6 @@ interface ChatInputProps {
     className?: string
     onSend: (text: string, files?: File[]) => void
     onStop: () => void
-    isLoading: boolean
     isThinking: boolean // From Zustand store - stable across hook re-instantiations
     status: 'submitted' | 'streaming' | 'ready' | 'error'
 }
@@ -20,7 +19,6 @@ export function ChatInput({
     className,
     onSend,
     onStop,
-    isLoading,
     isThinking,
     status
 }: ChatInputProps) {

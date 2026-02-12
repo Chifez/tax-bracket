@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadsRouteImport } from './routes/uploads'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ChatsChatIdRouteImport } from './routes/chats/$chatId'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
@@ -25,6 +26,11 @@ const UploadsRoute = UploadsRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -55,6 +61,7 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/settings': typeof SettingsRoute
   '/uploads': typeof UploadsRoute
   '/api/chat': typeof ApiChatRoute
@@ -64,6 +71,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/settings': typeof SettingsRoute
   '/uploads': typeof UploadsRoute
   '/api/chat': typeof ApiChatRoute
@@ -74,6 +82,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/settings': typeof SettingsRoute
   '/uploads': typeof UploadsRoute
   '/api/chat': typeof ApiChatRoute
@@ -85,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/llms.txt'
     | '/settings'
     | '/uploads'
     | '/api/chat'
@@ -94,6 +104,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/llms.txt'
     | '/settings'
     | '/uploads'
     | '/api/chat'
@@ -103,6 +114,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/llms.txt'
     | '/settings'
     | '/uploads'
     | '/api/chat'
@@ -113,6 +125,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LlmsDottxtRoute: typeof LlmsDottxtRoute
   SettingsRoute: typeof SettingsRoute
   UploadsRoute: typeof UploadsRoute
   ApiChatRoute: typeof ApiChatRoute
@@ -135,6 +148,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -177,6 +197,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LlmsDottxtRoute: LlmsDottxtRoute,
   SettingsRoute: SettingsRoute,
   UploadsRoute: UploadsRoute,
   ApiChatRoute: ApiChatRoute,

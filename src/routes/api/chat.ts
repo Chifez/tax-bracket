@@ -162,7 +162,7 @@ export const Route = createFileRoute('/api/chat')({
                     onError: (error) => {
                         console.error('Generative UI Error:', error)
                     },
-                    onFinish: async ({ text, toolCalls, usage, finishReason }) => {
+                    onFinish: async ({ text, toolCalls, finishReason }) => {
                         console.log('AI Generation Finished:', { text, toolCallsCount: toolCalls?.length, finishReason })
                         if (toolCalls?.length) {
                             console.log('Tool Calls:', JSON.stringify(toolCalls, null, 2))
