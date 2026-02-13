@@ -110,9 +110,6 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
     // Clear thinking state when streaming starts (streaming means response is coming in)
     // This ensures ThinkingAnimation hides and "Generating Response" shows
     if (isThinking && status === 'streaming') {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/8349c17a-640e-4305-bf28-6c651baadf11',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-chat.ts:112',message:'Clearing isThinking - status is streaming',data:{isThinking,status,lastMessageRole:messages[messages.length-1]?.role,lastMessageHasToolInvocations:!!(messages[messages.length-1] as any)?.toolInvocations?.length,lastMessageToolInvocationsCount:(messages[messages.length-1] as any)?.toolInvocations?.length||0},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         // Schedule to avoid state update during render
         queueMicrotask(() => {
             setThinking(false)
@@ -171,15 +168,6 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
 
     // isLoading combines hook status with store's isThinking for robustness
     const isLoading = isThinking || status === 'streaming' || status === 'submitted'
-
-    // #region agent log
-    if (messages.length > 0) {
-        const lastMsg = messages[messages.length - 1] as any
-        if (lastMsg.role === 'assistant') {
-            fetch('http://127.0.0.1:7242/ingest/8349c17a-640e-4305-bf28-6c651baadf11',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-chat.ts:170',message:'Last assistant message state',data:{status,isThinking,isLoading,hasToolInvocations:!!lastMsg.toolInvocations?.length,toolInvocationsCount:lastMsg.toolInvocations?.length||0,toolInvocations:lastMsg.toolInvocations?.map((t:any)=>({toolName:t.toolName,state:t.state,hasInput:!!t.input,hasOutput:!!t.output}))||[]},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        }
-    }
-    // #endregion
 
     return {
         messages,

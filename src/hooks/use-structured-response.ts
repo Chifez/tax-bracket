@@ -20,11 +20,6 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
         // 1. Live Tool Invocations (Streaming)
         // Check for the "generate_ui_blocks" tool
         const toolInvocations = message.toolInvocations || []
-        // #region agent log
-        if (message.role === 'assistant') {
-            fetch('http://127.0.0.1:7242/ingest/8349c17a-640e-4305-bf28-6c651baadf11',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-structured-response.ts:22',message:'Checking tool invocations',data:{toolInvocationsCount:toolInvocations.length,toolNames:toolInvocations.map((t:any)=>t.toolName||t.title||'unknown'),hasBlockTool:!!toolInvocations.find((t:any)=>(t.toolName==='generate_ui_blocks'||t.title==='generate_ui_blocks'))},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        }
-        // #endregion
         const blockTool = toolInvocations.find(
             t => (t as any).toolName === 'generate_ui_blocks' || (t as any).title === 'generate_ui_blocks'
         )
@@ -40,10 +35,6 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
             const isComplete = toolState === 'result' || toolState === 'call'
             // If not complete, we're still streaming
             const isStreaming = !isComplete
-
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/8349c17a-640e-4305-bf28-6c651baadf11',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-structured-response.ts:27',message:'Block tool detected - streaming state',data:{toolState,isComplete,isStreaming,hasInput:!!t.input,hasOutput:!!t.output,hasResult:!!t.result,hasArgs:!!t.args,inputKeys:t.input?Object.keys(t.input):[],outputKeys:t.output?Object.keys(t.output):[]},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
 
             // For streaming: prefer 'input' or 'args' when streaming, 'output'/'result' when complete
             // During streaming, data arrives incrementally in input/args
@@ -66,10 +57,6 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
 
             const blocks = (data.blocks || []) as UIBlock[]
             const sources = (data.sources || []) as Source[]
-
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/8349c17a-640e-4305-bf28-6c651baadf11',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-structured-response.ts:58',message:'Returning structured response',data:{blocksCount:blocks.length,isStreaming,hasSources:!!sources.length},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
 
             return { blocks, sources, isStreaming }
         }

@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import { ChevronDown, Check, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { Message } from '@/types'
 import { useStructuredResponse } from '@/hooks/use-structured-response'
 import { BlockRenderer } from './blocks/block-renderer'
@@ -27,12 +27,48 @@ interface DocumentResponseProps {
 export function DocumentResponse({ message, className, isStreaming: parentIsStreaming }: DocumentResponseProps) {
     const [isExpanded, setIsExpanded] = useState(true)
     const { blocks, sources, isStreaming: hookIsStreaming } = useStructuredResponse(message)
+    
+    // Track if this message was ever in a streaming state
+    // This ensures "Generating Response" stays visible until blocks actually appear
+    const wasStreamingRef = useRef(false)
+    const previousParentIsStreamingRef = useRef<boolean | undefined>(undefined)
+    const messageIdRef = useRef<string | undefined>(message.id)
+    
+    // Reset refs when message changes
+    useEffect(() => {
+        if (messageIdRef.current !== message.id) {
+            wasStreamingRef.current = false
+            previousParentIsStreamingRef.current = undefined
+            messageIdRef.current = message.id
+        }
+    }, [message.id])
+    
+    // Update refs when parent streaming status changes
+    useEffect(() => {
+        if (parentIsStreaming === true) {
+            wasStreamingRef.current = true
+        }
+        previousParentIsStreamingRef.current = parentIsStreaming
+    }, [parentIsStreaming])
 
     const blockCount = blocks.length
 
-    // Use parent streaming status if provided, otherwise fall back to hook detection
-    // This ensures we show "Generating Response" even when tool invocations haven't appeared yet
-    const isStreaming = parentIsStreaming !== undefined ? parentIsStreaming : hookIsStreaming
+    // Determine streaming state:
+    // 1. If parent says we're streaming, we're streaming
+    // 2. If parent was streaming but is now false, AND we have no blocks yet, keep streaming (waiting for blocks)
+    // 3. Once blocks appear, stop streaming
+    // 4. Fall back to hook detection if parent status not provided
+    let isStreaming: boolean
+    if (parentIsStreaming !== undefined) {
+        if (parentIsStreaming) {
+            isStreaming = true
+        } else {
+            // Parent says not streaming, but if we were streaming and have no blocks yet, keep showing "Generating Response"
+            isStreaming = wasStreamingRef.current && blockCount === 0
+        }
+    } else {
+        isStreaming = hookIsStreaming
+    }
 
     // Show header when:
     // - We have blocks to show
@@ -41,10 +77,6 @@ export function DocumentResponse({ message, className, isStreaming: parentIsStre
     // - Message is empty with no toolInvocations and not streaming (ThinkingAnimation handles that state)
     const hasToolInvocations = message.toolInvocations && message.toolInvocations.length > 0
     const showHeader = blockCount > 0 || isStreaming || hasToolInvocations
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/8349c17a-640e-4305-bf28-6c651baadf11',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'document-response.tsx:42',message:'DocumentResponse render - header visibility',data:{blockCount,isStreaming,hookIsStreaming,parentIsStreaming,hasToolInvocations,showHeader,toolInvocationsCount:message.toolInvocations?.length||0,messageId:message.id},timestamp:Date.now(),runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
 
     return (
         <div className={cn('flex gap-3', className)}>
