@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getChats, getChat, deleteChat, editMessage } from '@/server/functions/chat'
+import { getChats, getChat, deleteChat, editMessage, renameChat } from '@/server/functions/chat'
 import { useRouter, useNavigate } from '@tanstack/react-router'
 import { useChatStore } from '@/stores/chat-store'
 import { toast } from 'sonner'
@@ -29,14 +29,14 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
     const navigate = useNavigate()
     const { setThinking, setActiveChat } = useChatStore()
     const isThinking = useChatStore(state => state.isThinking)
-    
+
     // Track pending message processing - read synchronously, no useEffect
-    const pendingMessageRef = useRef<{ processed: boolean; data: any | null }>({ 
-        processed: false, 
-        data: null 
+    const pendingMessageRef = useRef<{ processed: boolean; data: any | null }>({
+        processed: false,
+        data: null
     })
     const hasSentPendingMessage = useRef(false)
-    
+
     // Read pending message synchronously during render (once per chatId)
     if (!pendingMessageRef.current.processed && chatId) {
         const pendingData = sessionStorage.getItem('pendingMessage')
@@ -75,7 +75,7 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
                 await queryClient.invalidateQueries({ queryKey: ['chat', chatId] })
             }
             // Clear thinking state
-                setThinking(false)
+            setThinking(false)
         },
         onError: (error) => {
             setThinking(false)
@@ -87,7 +87,7 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
     if (pendingMessageRef.current.data && !hasSentPendingMessage.current && status === 'ready') {
         hasSentPendingMessage.current = true
         const { chatId: _, ...messageOptions } = pendingMessageRef.current.data
-        
+
         // Schedule after current render completes
         queueMicrotask(() => {
             setThinking(true)
@@ -100,38 +100,38 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
         if (!chatId) {
             // New chat flow - optimistic navigation
             const newChatId = generateId()
-            
+
             // Extract text from the options (could be in different shapes)
             const messageText = options && 'text' in options ? options.text : ''
-            
+
             // Create optimistic user message for immediate display
             const optimisticMessage = {
                 id: generateId(),
                 role: 'user' as const,
                 parts: [{ type: 'text' as const, text: messageText || '' }],
             }
-            
+
             // 1. Add optimistic message to local state FIRST
             setMessages([optimisticMessage as UIMessage])
-            
+
             // 2. Store message options for the new route to pick up
             sessionStorage.setItem('pendingMessage', JSON.stringify({
                 chatId: newChatId,
                 ...options
             }))
-            
+
             // 3. Update store and navigate immediately (synchronous, no flicker)
             setActiveChat(newChatId)
-            navigate({ 
-                to: '/chats/$chatId', 
+            navigate({
+                to: '/chats/$chatId',
                 params: { chatId: newChatId },
-                replace: true 
+                replace: true
             })
-            
+
             // Return resolved promise to match the expected type
             return Promise.resolve()
         }
-        
+
         // Existing chat flow
         setThinking(true)
         return originalSendMessage(options, requestOptions)
@@ -180,6 +180,20 @@ export const useEditMessage = () => {
         },
         onSuccess: (_data, variables) => {
             queryClient.invalidateQueries({ queryKey: ['chat', variables.chatId] })
+        }
+    })
+}
+
+export const useRenameChat = () => {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async ({ chatId, title }: { chatId: string, title: string }) => {
+            await renameChat({ data: { chatId, title } })
+            return { success: true }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['chats'] })
         }
     })
 }

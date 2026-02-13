@@ -3,9 +3,12 @@ import { db } from '@/db'
 import { chats, messages } from '@/db/schema'
 import { eq, desc, and, gt } from 'drizzle-orm'
 import { getAuthenticatedUser } from '@/server/middleware/auth'
-import { createChatSchema, sendMessageSchema, getChatSchema, deleteChatSchema, editMessageSchema } from '@/server/validators/chat'
+import { createChatSchema, sendMessageSchema, getChatSchema, deleteChatSchema, editMessageSchema, renameChatSchema } from '@/server/validators/chat'
 import { notFound, unauthorized } from '@/server/lib/error'
 import { MOCK_RESPONSES } from '@/server/data/mock-responses'
+import { s3Client, BUCKET_NAME } from '@/server/lib/s3'
+import { DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { files } from '@/db/schema'
 
 /**
  * Helper to determine mock response
@@ -247,6 +250,9 @@ export const sendMessage = createServerFn({ method: 'POST' })
 /**
  * Delete a chat
  */
+/**
+ * Delete a chat and cleanup files
+ */
 export const deleteChat = createServerFn({ method: "POST" })
     .inputValidator((data: unknown) => deleteChatSchema.parse(data))
     .handler(async ({ data }) => {
@@ -255,7 +261,48 @@ export const deleteChat = createServerFn({ method: "POST" })
             throw unauthorized()
         }
 
+        // 1. Find all files associated with this chat
+        const chatFiles = await db.query.files.findMany({
+            where: and(eq(files.chatId, data.chatId), eq(files.userId, user.id))
+        })
+
+        // 2. Delete files from S3/R2 (fire and forget for speed)
+        if (chatFiles.length > 0) {
+            Promise.all(chatFiles.map(file => {
+                if (file.metadata?.s3Key) {
+                    return s3Client.send(new DeleteObjectCommand({
+                        Bucket: BUCKET_NAME,
+                        Key: file.metadata.s3Key
+                    })).catch(err => console.error('Failed to delete S3 object', err))
+                }
+                return Promise.resolve()
+            })).catch(err => console.error('Error cleaning up S3 files', err))
+
+            // 3. Delete files from DB
+            await db.delete(files)
+                .where(and(eq(files.chatId, data.chatId), eq(files.userId, user.id)))
+        }
+
+        // 4. Delete chat (cascades to messages)
         await db.delete(chats)
+            .where(and(eq(chats.id, data.chatId), eq(chats.userId, user.id)))
+
+        return { success: true }
+    })
+
+/**
+ * Rename a chat
+ */
+export const renameChat = createServerFn({ method: "POST" })
+    .inputValidator((data: unknown) => renameChatSchema.parse(data))
+    .handler(async ({ data }) => {
+        const user = await getAuthenticatedUser()
+        if (!user) {
+            throw unauthorized()
+        }
+
+        await db.update(chats)
+            .set({ title: data.title, updatedAt: new Date() })
             .where(and(eq(chats.id, data.chatId), eq(chats.userId, user.id)))
 
         return { success: true }

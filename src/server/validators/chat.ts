@@ -27,3 +27,8 @@ export const editMessageSchema = z.object({
     messageId: z.string(),
     content: z.string().min(1),
 })
+
+export const renameChatSchema = z.object({
+    chatId: z.string(),
+    title: z.string().min(1).max(255),
+})
