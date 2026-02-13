@@ -19,6 +19,16 @@ const queryClient = new QueryClient({
   },
 })
 
+// Get site URL from environment variable with fallback
+const getSiteUrl = () => {
+  if (typeof process !== 'undefined' && process.env?.SITE_URL) {
+    return process.env.SITE_URL
+  }
+  return 'https://taxbracketai.com'
+}
+
+const siteUrl = getSiteUrl()
+
 export const Route = createRootRoute({
   head: () => ({
     meta: [
@@ -44,6 +54,14 @@ export const Route = createRootRoute({
         name: 'author',
         content: 'TaxBracket',
       },
+      {
+        name: 'robots',
+        content: 'index, follow',
+      },
+      {
+        name: 'googlebot',
+        content: 'index, follow',
+      },
       // Open Graph
       {
         property: 'og:title',
@@ -59,7 +77,7 @@ export const Route = createRootRoute({
       },
       {
         property: 'og:url',
-        content: 'https://taxbracketai.com', // Placeholder
+        content: siteUrl,
       },
       {
         property: 'og:site_name',
@@ -71,7 +89,19 @@ export const Route = createRootRoute({
       },
       {
         property: 'og:image',
-        content: '/og-image.png',
+        content: `${siteUrl}/og-image.png`,
+      },
+      {
+        property: 'og:image:width',
+        content: '1200',
+      },
+      {
+        property: 'og:image:height',
+        content: '630',
+      },
+      {
+        property: 'og:image:alt',
+        content: 'TaxBracket - AI-Powered Nigerian Tax Assistant',
       },
       // Twitter
       {
@@ -88,7 +118,7 @@ export const Route = createRootRoute({
       },
       {
         name: 'twitter:image',
-        content: '/og-image.png',
+        content: `${siteUrl}/og-image.png`,
       },
       // PWA / Mobile
       {
@@ -121,24 +151,69 @@ export const Route = createRootRoute({
         rel: 'stylesheet',
         href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap',
       },
+      // Favicon links - multiple sizes for better browser support
+      {
+        rel: 'icon',
+        type: 'image/x-icon',
+        href: '/favicon.ico',
+      },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '16x16',
+        href: '/favicon-16x16.png',
+      },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '32x32',
+        href: '/favicon-32x32.png',
+      },
+      {
+        rel: 'apple-touch-icon',
+        sizes: '180x180',
+        href: '/apple-touch-icon.png',
+      },
+      {
+        rel: 'manifest',
+        href: '/site.webmanifest',
+      },
+      {
+        rel: 'canonical',
+        href: siteUrl,
+      },
     ],
     scripts: [
       {
         type: 'application/ld+json',
         children: JSON.stringify({
           '@context': 'https://schema.org',
-          '@type': 'WebSite',
+          '@type': 'WebApplication',
           name: 'TaxBracket',
-          url: 'https://taxbracketai.com',
+          url: siteUrl,
+          description: 'AI-powered financial assistant for Nigerian tax calculations and bank statement analysis',
+          applicationCategory: 'FinanceApplication',
+          operatingSystem: 'Web',
+          offers: {
+            '@type': 'Offer',
+            price: '0',
+            priceCurrency: 'NGN',
+          },
           publisher: {
             '@type': 'Organization',
             name: 'TaxBracket',
-            url: 'https://taxbracketai.com',
-            logo: 'https://taxbracketai.com/logo.png', // Placeholder
-            sameAs: [
-              'https://twitter.com/taxbracket_ng', // Placeholder
-            ],
+            url: siteUrl,
+            logo: {
+              '@type': 'ImageObject',
+              url: `${siteUrl}/og-image.png`,
+            },
           },
+          featureList: [
+            'Bank Statement Upload',
+            'Automated Tax Calculation',
+            'Transaction Analysis',
+            'AI Chat Assistant',
+          ],
         }),
       },
     ],
