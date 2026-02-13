@@ -30,7 +30,6 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
     const { setThinking, setActiveChat } = useChatStore()
     const isThinking = useChatStore(state => state.isThinking)
 
-    // Track pending message processing - read synchronously, no useEffect
     const pendingMessageRef = useRef<{ processed: boolean; data: any | null; forChatId: string | null }>({
         processed: false,
         data: null,
@@ -39,15 +38,12 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
     const hasSentPendingMessage = useRef(false)
     const previousChatIdRef = useRef<string | null>(null)
 
-    // Reset refs when chatId changes
     if (previousChatIdRef.current !== chatId) {
         previousChatIdRef.current = chatId
         pendingMessageRef.current = { processed: false, data: null, forChatId: null }
         hasSentPendingMessage.current = false
     }
 
-    // Read pending message synchronously during render (once per chatId)
-    // Guard with typeof window check for SSR safety
     if (!pendingMessageRef.current.processed && chatId && typeof window !== 'undefined') {
         const pendingData = sessionStorage.getItem('pendingMessage')
         if (pendingData) {
@@ -80,13 +76,10 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
             body: { chatId }
         }),
         onFinish: async () => {
-            // Invalidate and refetch queries to sync DB messages
             await queryClient.invalidateQueries({ queryKey: ['chats'] })
             if (chatId) {
-                // Refetch to ensure ChatContainer gets updated DB messages
                 await queryClient.refetchQueries({ queryKey: ['chat', chatId] })
             }
-            // Clear thinking state
             setThinking(false)
         },
         onError: (error) => {
@@ -95,47 +88,35 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
         }
     })
 
-    // Process pending message after hook is ready (no useEffect - runs in render)
     if (pendingMessageRef.current.data && !hasSentPendingMessage.current && status === 'ready') {
         hasSentPendingMessage.current = true
         const { chatId: _, ...messageOptions } = pendingMessageRef.current.data
 
-        // Schedule after current render completes
         queueMicrotask(() => {
             setThinking(true)
             originalSendMessage(messageOptions)
         })
     }
 
-    // Clear thinking state when streaming starts (streaming means response is coming in)
-    // This ensures ThinkingAnimation hides and "Generating Response" shows
     if (isThinking && status === 'streaming') {
-        // Schedule to avoid state update during render
         queueMicrotask(() => {
             setThinking(false)
         })
     }
 
-    // Wrap sendMessage to handle new chat creation with optimistic UI
     const sendMessage: typeof originalSendMessage = (options, requestOptions) => {
         if (!chatId) {
-            // New chat flow - optimistic navigation
             const newChatId = generateId()
-
-            // Extract text from the options (could be in different shapes)
             const messageText = options && 'text' in options ? options.text : ''
 
-            // Create optimistic user message for immediate display
             const optimisticMessage = {
                 id: generateId(),
                 role: 'user' as const,
                 parts: [{ type: 'text' as const, text: messageText || '' }],
             }
 
-            // 1. Add optimistic message to local state FIRST
             setMessages([optimisticMessage as UIMessage])
 
-            // 2. Store message options for the new route to pick up (SSR-safe)
             if (typeof window !== 'undefined') {
                 sessionStorage.setItem('pendingMessage', JSON.stringify({
                     chatId: newChatId,
@@ -143,7 +124,6 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
                 }))
             }
 
-            // 3. Update store and navigate immediately (synchronous, no flicker)
             setActiveChat(newChatId)
             navigate({
                 to: '/chats/$chatId',
@@ -151,22 +131,18 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
                 replace: true
             })
 
-            // Return resolved promise to match the expected type
             return Promise.resolve()
         }
 
-        // Existing chat flow
         setThinking(true)
         return originalSendMessage(options, requestOptions)
     }
 
-    // Wrap stop to clear thinking state
     const stop = () => {
         setThinking(false)
         return originalStop()
     }
 
-    // isLoading combines hook status with store's isThinking for robustness
     const isLoading = isThinking || status === 'streaming' || status === 'submitted'
 
     return {

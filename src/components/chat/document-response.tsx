@@ -21,20 +21,18 @@ interface ExtendedMessage extends Partial<Message> {
 interface DocumentResponseProps {
     message: ExtendedMessage
     className?: string
-    isStreaming?: boolean // Pass streaming status from parent (status === 'streaming')
+    isStreaming?: boolean
 }
 
 export function DocumentResponse({ message, className, isStreaming: parentIsStreaming }: DocumentResponseProps) {
     const [isExpanded, setIsExpanded] = useState(true)
     const { blocks, sources, isStreaming: hookIsStreaming } = useStructuredResponse(message)
     
-    // Track if this message was ever in a streaming state
-    // This ensures "Generating Response" stays visible until blocks actually appear
+    // Keep "Generating Response" visible until blocks appear (even if status changes to 'ready')
     const wasStreamingRef = useRef(false)
     const previousParentIsStreamingRef = useRef<boolean | undefined>(undefined)
     const messageIdRef = useRef<string | undefined>(message.id)
     
-    // Reset refs when message changes
     useEffect(() => {
         if (messageIdRef.current !== message.id) {
             wasStreamingRef.current = false
@@ -43,7 +41,6 @@ export function DocumentResponse({ message, className, isStreaming: parentIsStre
         }
     }, [message.id])
     
-    // Update refs when parent streaming status changes
     useEffect(() => {
         if (parentIsStreaming === true) {
             wasStreamingRef.current = true
@@ -53,28 +50,17 @@ export function DocumentResponse({ message, className, isStreaming: parentIsStre
 
     const blockCount = blocks.length
 
-    // Determine streaming state:
-    // 1. If parent says we're streaming, we're streaming
-    // 2. If parent was streaming but is now false, AND we have no blocks yet, keep streaming (waiting for blocks)
-    // 3. Once blocks appear, stop streaming
-    // 4. Fall back to hook detection if parent status not provided
     let isStreaming: boolean
     if (parentIsStreaming !== undefined) {
         if (parentIsStreaming) {
             isStreaming = true
         } else {
-            // Parent says not streaming, but if we were streaming and have no blocks yet, keep showing "Generating Response"
             isStreaming = wasStreamingRef.current && blockCount === 0
         }
     } else {
-        isStreaming = hookIsStreaming
+        isStreaming = hookIsStreaming as boolean
     }
 
-    // Show header when:
-    // - We have blocks to show
-    // - OR we're actively streaming (from parent status OR toolInvocations exist)
-    // DON'T show header when:
-    // - Message is empty with no toolInvocations and not streaming (ThinkingAnimation handles that state)
     const hasToolInvocations = message.toolInvocations && message.toolInvocations.length > 0
     const showHeader = blockCount > 0 || isStreaming || hasToolInvocations
 

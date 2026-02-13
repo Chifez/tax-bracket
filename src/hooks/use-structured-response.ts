@@ -3,7 +3,6 @@ import type { UIToolInvocation } from 'ai'
 import type { StructuredResponse, UIBlock, Source } from '@/components/chat/blocks/types'
 import { useMemo } from 'react'
 
-// Define ExtendedMessage locally as it is an extension for the UI
 interface ExtendedMessage extends Partial<Message> {
     toolInvocations?: UIToolInvocation<any>[]
     content?: string
@@ -17,8 +16,6 @@ interface ExtendedMessage extends Partial<Message> {
 
 export function useStructuredResponse(message: ExtendedMessage): StructuredResponse {
     return useMemo(() => {
-        // 1. Live Tool Invocations (Streaming)
-        // Check for the "generate_ui_blocks" tool
         const toolInvocations = message.toolInvocations || []
         const blockTool = toolInvocations.find(
             t => (t as any).toolName === 'generate_ui_blocks' || (t as any).title === 'generate_ui_blocks'
@@ -27,31 +24,22 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
         if (blockTool) {
             const t = blockTool as any
 
-            // Determine streaming state based on tool invocation state
             // AI SDK v6 states: 'partial-call', 'call', 'result'
             // AI SDK v5 states: 'input-streaming', 'input-available', 'output-available'
             const toolState = t.state || ''
-            // 'call' and 'result' states mean the tool call is complete
             const isComplete = toolState === 'result' || toolState === 'call'
-            // If not complete, we're still streaming
             const isStreaming = !isComplete
 
-            // For streaming: prefer 'input' or 'args' when streaming, 'output'/'result' when complete
-            // During streaming, data arrives incrementally in input/args
-            // For 'call' state (UI tools), the data is in 'input' or 'args'
+            // Prefer 'input'/'args' when streaming, 'output'/'result' when complete
             let data: any = {}
 
             if (t.output && Object.keys(t.output).length > 0) {
-                // Tool has output, use it
                 data = t.output
             } else if (t.result && Object.keys(t.result).length > 0) {
-                // Tool has result, use it
                 data = t.result
             } else if (t.input) {
-                // Tool is streaming or 'call' state, use input
                 data = t.input
             } else if (t.args) {
-                // Fallback to args
                 data = t.args
             }
 
@@ -61,13 +49,9 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
             return { blocks, sources, isStreaming }
         }
 
-        // 2. Persisted Data (Database)
-        // We expect the 'metadata' column to contain the 'blocks' and 'sources'
-        // 'message.metadata' comes from the DB schema
         let metadata = message.metadata as any
 
         if (metadata) {
-            // Handle double-serialized JSON if necessary
             if (typeof metadata === 'string') {
                 try {
                     metadata = JSON.parse(metadata)
@@ -84,13 +68,9 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
             }
         }
 
-        // 3. Fallback (Legacy Compatibility)
-        // If we have old-style columns (sections, charts), map them to blocks
-        // allowing old messages to render in the new system
+        // Legacy compatibility: map old sections/charts to blocks
         const legacyBlocks: UIBlock[] = []
 
-        // Text content -> TextBlock
-        // Check both 'content' string and 'parts' array (UIMessage format)
         let textContent = message.content || ''
         if (!textContent && message.parts) {
             textContent = message.parts
@@ -102,7 +82,6 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
             legacyBlocks.push({ type: 'text', content: textContent })
         }
 
-        // Legacy Sections -> SectionBlocks
         if (message.sections && Array.isArray(message.sections)) {
             message.sections.forEach((section: any) => {
                 legacyBlocks.push({
@@ -115,7 +94,6 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
             })
         }
 
-        // Legacy Charts -> ChartBlocks
         if (message.charts && Array.isArray(message.charts)) {
             message.charts.forEach((chart: any) => {
                 legacyBlocks.push({
@@ -132,7 +110,6 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
             })
         }
 
-        // Legacy Stats -> StatsBlock
         if (message.stats) {
             legacyBlocks.push({
                 type: 'stats',

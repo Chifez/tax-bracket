@@ -18,9 +18,7 @@ interface ChatContainerProps {
 
 export function ChatContainer({ className, chatId, initialMessages = [] }: ChatContainerProps) {
     const { isThinking } = useChatStore()
-
-    // Fetch latest messages from DB (for syncing after streaming completes)
-    const { data: chatData, isLoading: isChatLoading } = useChatData(chatId)
+    const { data: chatData } = useChatData(chatId)
 
     const {
         messages,
@@ -35,25 +33,18 @@ export function ChatContainer({ className, chatId, initialMessages = [] }: ChatC
     const lastSyncedMessageCountRef = useRef(0)
     const previousChatIdRef = useRef<string | null>(null)
 
-    // Reset sync counter when chatId changes
     if (previousChatIdRef.current !== chatId) {
         previousChatIdRef.current = chatId
         lastSyncedMessageCountRef.current = 0
     }
 
-    // Sync DB messages to local state when:
-    // - Not currently streaming (status === 'ready')
-    // - DB has messages we don't have locally (after onFinish invalidates)
-    // This ensures streamed messages are replaced with DB versions (which have proper metadata)
     useEffect(() => {
         if (!chatId || !chatData?.chat?.messages) return
-        if (status !== 'ready') return // Don't sync during streaming
+        if (status !== 'ready') return
 
         const dbMessages = chatData.chat.messages
         const dbMessageCount = dbMessages.length
 
-        // Only sync if DB has more messages than we've synced before
-        // This prevents overwriting optimistic messages during navigation
         if (dbMessageCount > lastSyncedMessageCountRef.current) {
             const transformedMessages: UIMessage[] = dbMessages.map((msg: any) => ({
                 id: msg.id,
@@ -67,11 +58,10 @@ export function ChatContainer({ className, chatId, initialMessages = [] }: ChatC
         }
     }, [chatData, chatId, status, setMessages])
 
-    // Auto-scroll on new messages
     useEffect(() => {
         if (messages.length > 0 || isLoading) {
             setTimeout(() => {
-                bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+                bottomRef.current?.scrollIntoView({ behavior: 'smooth' , block: 'end',})
             }, 100)
         }
     }, [messages, isLoading])
@@ -109,12 +99,6 @@ export function ChatContainer({ className, chatId, initialMessages = [] }: ChatC
                                 )
                             )}
 
-
-                            {/* Show ThinkingAnimation only when:
-                                - isThinking is true (waiting for response)
-                                - AND no streaming has started yet (last message is user or no messages)
-                                Once streaming starts, isThinking is cleared by useChatSession
-                            */}
                             {isThinking && (
                                 messages.length === 0 ||
                                 messages[messages.length - 1]?.role === 'user'
@@ -122,7 +106,7 @@ export function ChatContainer({ className, chatId, initialMessages = [] }: ChatC
                                 <ThinkingAnimation />
                             )}
 
-                            <div ref={bottomRef} />
+                            <div ref={bottomRef} className="min-h-20" />
                         </>
                     )}
                 </div>
