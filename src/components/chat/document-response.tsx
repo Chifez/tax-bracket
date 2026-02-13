@@ -8,7 +8,8 @@ import type { UIToolInvocation } from 'ai'
 
 interface ExtendedMessage extends Partial<Message> {
     toolInvocations?: UIToolInvocation<any>[]
-    content: string
+    content?: string
+    parts?: Array<{ type: string; text?: string }>
     metadata?: any
     sections?: any[]
     charts?: any[]
@@ -20,16 +21,30 @@ interface ExtendedMessage extends Partial<Message> {
 interface DocumentResponseProps {
     message: ExtendedMessage
     className?: string
+    isStreaming?: boolean // Pass streaming status from parent (status === 'streaming')
 }
 
-export function DocumentResponse({ message, className }: DocumentResponseProps) {
+export function DocumentResponse({ message, className, isStreaming: parentIsStreaming }: DocumentResponseProps) {
     const [isExpanded, setIsExpanded] = useState(true)
-    const { blocks, sources, isStreaming } = useStructuredResponse(message)
+    const { blocks, sources, isStreaming: hookIsStreaming } = useStructuredResponse(message)
 
     const blockCount = blocks.length
 
-    // Show streaming indicator header when blocks are coming in
-    const showHeader = blockCount > 0 || isStreaming
+    // Use parent streaming status if provided, otherwise fall back to hook detection
+    // This ensures we show "Generating Response" even when tool invocations haven't appeared yet
+    const isStreaming = parentIsStreaming !== undefined ? parentIsStreaming : hookIsStreaming
+
+    // Show header when:
+    // - We have blocks to show
+    // - OR we're actively streaming (from parent status OR toolInvocations exist)
+    // DON'T show header when:
+    // - Message is empty with no toolInvocations and not streaming (ThinkingAnimation handles that state)
+    const hasToolInvocations = message.toolInvocations && message.toolInvocations.length > 0
+    const showHeader = blockCount > 0 || isStreaming || hasToolInvocations
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/8349c17a-640e-4305-bf28-6c651baadf11',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'document-response.tsx:42',message:'DocumentResponse render - header visibility',data:{blockCount,isStreaming,hookIsStreaming,parentIsStreaming,hasToolInvocations,showHeader,toolInvocationsCount:message.toolInvocations?.length||0,messageId:message.id},timestamp:Date.now(),runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
 
     return (
         <div className={cn('flex gap-3', className)}>

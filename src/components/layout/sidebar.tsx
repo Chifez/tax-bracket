@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useParams } from '@tanstack/react-router'
 import { useChatStore } from '@/stores/chat-store'
 import { Logo } from '@/components/logo'
 import { Separator, ScrollArea } from '@/components/ui'
@@ -17,7 +17,10 @@ interface SidebarProps {
 }
 
 export function Sidebar({ className, onNavAction }: SidebarProps) {
-    const { isSidebarOpen, activeChat, setActiveChat } = useChatStore()
+    const { isSidebarOpen } = useChatStore()
+    const params = useParams({ strict: false }) as { chatId?: string }
+    const activeChat = params.chatId || null
+
     const { data: chatsData } = useChats()
     const chats = chatsData?.chats ?? []
 
@@ -37,11 +40,7 @@ export function Sidebar({ className, onNavAction }: SidebarProps) {
             const action = 'action' in item ? item.action : item.href
             onNavAction(action)
         }
-    }, [onNavAction, navigate, activeChat])
-
-    const handleChatSelect = useCallback((chatId: string) => {
-        setActiveChat(chatId)
-    }, [setActiveChat])
+    }, [onNavAction, navigate])
 
     return (
         <aside
@@ -76,7 +75,6 @@ export function Sidebar({ className, onNavAction }: SidebarProps) {
                     <SidebarChatList
                         chats={chats}
                         activeChat={activeChat}
-                        onChatSelect={handleChatSelect}
                         isCollapsed={!isSidebarOpen}
                     />
                 </ScrollArea>

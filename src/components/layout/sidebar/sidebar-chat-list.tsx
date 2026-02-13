@@ -10,7 +10,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 interface SidebarChatListProps {
     chats: Chat[]
     activeChat: string | null
-    onChatSelect: (chatId: string) => void
     isCollapsed?: boolean
     maxItems?: number
 }
@@ -21,7 +20,6 @@ interface SidebarChatListProps {
 export const SidebarChatList = memo(function SidebarChatList({
     chats,
     activeChat,
-    onChatSelect,
     isCollapsed = false,
     maxItems = 10
 }: SidebarChatListProps) {
@@ -83,7 +81,6 @@ export const SidebarChatList = memo(function SidebarChatList({
                                 to="/chats/$chatId"
                                 params={{ chatId: chat.id }}
                                 className={baseClassName}
-                                onClick={() => onChatSelect(chat.id)}
                             >
                                 {linkContent}
                             </Link>
@@ -95,7 +92,6 @@ export const SidebarChatList = memo(function SidebarChatList({
                                     to="/chats/$chatId"
                                     params={{ chatId: chat.id }}
                                     className="flex items-center gap-3 flex-1 min-w-0"
-                                    onClick={() => onChatSelect(chat.id)}
                                 >
                                     {linkContent}
                                 </Link>

@@ -1,8 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getChat } from '@/server/functions/chat'
 import { ChatContainer } from '@/components/chat'
-import { useChatStore } from '@/stores/chat-store'
-import { useEffect } from 'react'
 
 export const Route = createFileRoute('/chats/$chatId')({
     component: ChatRoute,
@@ -43,7 +41,7 @@ export const Route = createFileRoute('/chats/$chatId')({
                             name: 'TaxBracket',
                             logo: {
                                 '@type': 'ImageObject',
-                                url: 'https://taxbracket.ng/logo.png'
+                                url: '/logo.png'
                             }
                         }
                     }),
@@ -55,13 +53,18 @@ export const Route = createFileRoute('/chats/$chatId')({
 
 function ChatRoute() {
     const { chatId } = Route.useParams()
-    const setActiveChat = useChatStore(state => state.setActiveChat)
+    const { chat } = Route.useLoaderData()
 
-    useEffect(() => {
-        if (chatId) {
-            setActiveChat(chatId)
-        }
-    }, [chatId, setActiveChat])
+    // Transform DB messages to UIMessage format for initial render
+    const messages = chat?.messages || []
 
-    return <ChatContainer />
+    const initialMessages = messages.map((msg: any) => ({
+        id: msg.id,
+        role: msg.role,
+        parts: [{ type: 'text' as const, text: msg.content }],
+        createdAt: msg.createdAt,
+        ...msg
+    }))
+
+    return <ChatContainer chatId={chatId} initialMessages={initialMessages} />
 }

@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { useChatStore } from '@/stores/chat-store'
-import { useChatData, useChatSession } from '@/hooks/use-chat'
+import { useChatSession, useChatData } from '@/hooks/use-chat'
 import { ScrollArea } from '@/components/ui'
 import { ChatInput } from './chat-input'
 import { DocumentResponse } from './document-response'
@@ -12,15 +12,15 @@ import type { UIMessage } from 'ai'
 
 interface ChatContainerProps {
     className?: string
+    chatId: string | null
+    initialMessages?: UIMessage[]
 }
 
-export function ChatContainer({ className }: ChatContainerProps) {
-    const { activeChat, isThinking } = useChatStore()
+export function ChatContainer({ className, chatId, initialMessages = [] }: ChatContainerProps) {
+    const { isThinking } = useChatStore()
 
-    const { data: chatData, isLoading: isInitialLoading, refetch } = useChatData(activeChat)
-
-    // Convert your Message type to UIMessage if needed
-    const initialMessages = (chatData?.chat?.messages ?? []) as any
+    // Fetch latest messages from DB (for syncing after streaming completes)
+    const { data: chatData, isLoading: isChatLoading } = useChatData(chatId)
 
     const {
         messages,
@@ -29,36 +29,43 @@ export function ChatContainer({ className }: ChatContainerProps) {
         status,
         stop,
         setMessages
-    } = useChatSession(activeChat, initialMessages)
+    } = useChatSession(chatId, initialMessages)
 
-    // Refetch when activeChat changes
-    useEffect(() => {
-        if (activeChat) {
-            const timer = setTimeout(() => {
-                refetch()
-            }, 100)
-            return () => clearTimeout(timer)
-        }
-    }, [activeChat, refetch])
+    const bottomRef = useRef<HTMLDivElement>(null)
+    const lastSyncedMessageCountRef = useRef(0)
+    const previousChatIdRef = useRef<string | null>(null)
 
-    // Sync messages from DB to local state
+    // Reset sync counter when chatId changes
+    if (previousChatIdRef.current !== chatId) {
+        previousChatIdRef.current = chatId
+        lastSyncedMessageCountRef.current = 0
+    }
+
+    // Sync DB messages to local state when:
+    // - Not currently streaming (status === 'ready')
+    // - DB has messages we don't have locally (after onFinish invalidates)
+    // This ensures streamed messages are replaced with DB versions (which have proper metadata)
     useEffect(() => {
-        if (chatData?.chat?.messages && chatData.chat.messages.length > 0) {
-            // Convert DB messages to UIMessage format
-            const dbMessages = chatData.chat.messages.map((msg: any) => ({
+        if (!chatId || !chatData?.chat?.messages) return
+        if (status !== 'ready') return // Don't sync during streaming
+
+        const dbMessages = chatData.chat.messages
+        const dbMessageCount = dbMessages.length
+
+        // Only sync if DB has more messages than we've synced before
+        // This prevents overwriting optimistic messages during navigation
+        if (dbMessageCount > lastSyncedMessageCountRef.current) {
+            const transformedMessages: UIMessage[] = dbMessages.map((msg: any) => ({
                 id: msg.id,
                 role: msg.role,
                 parts: [{ type: 'text' as const, text: msg.content }],
                 createdAt: msg.createdAt,
-                // Preserve any other properties for legacy messages
                 ...msg
-            })) as UIMessage[]
-
-            setMessages(dbMessages)
+            }))
+            setMessages(transformedMessages)
+            lastSyncedMessageCountRef.current = dbMessageCount
         }
-    }, [chatData, setMessages])
-
-    const bottomRef = useRef<HTMLDivElement>(null)
+    }, [chatData, chatId, status, setMessages])
 
     // Auto-scroll on new messages
     useEffect(() => {
@@ -86,7 +93,7 @@ export function ChatContainer({ className }: ChatContainerProps) {
         <div className={cn('flex flex-col h-full bg-background', className)}>
             <ScrollArea className="flex-1 px-4 py-4 max-sm:pt-14">
                 <div className="max-w-2xl mx-auto space-y-4">
-                    {!hasMessages && !isInitialLoading && !isThinking ? (
+                    {!hasMessages && !isThinking ? (
                         <EmptyState onSend={(message) => sendMessage({ text: message })} />
                     ) : (
                         <>
@@ -94,20 +101,26 @@ export function ChatContainer({ className }: ChatContainerProps) {
                                 message.role === 'user' ? (
                                     <MessageBubble key={message.id} message={message} />
                                 ) : (
-                                    <DocumentResponse key={message.id} message={message} />
+                                    <DocumentResponse 
+                                        key={message.id} 
+                                        message={message}
+                                        isStreaming={status === 'streaming' && message.id === messages[messages.length - 1]?.id}
+                                    />
                                 )
                             )}
 
 
+                            {/* Show ThinkingAnimation only when:
+                                - isThinking is true (waiting for response)
+                                - AND no streaming has started yet (last message is user or no messages)
+                                Once streaming starts, isThinking is cleared by useChatSession
+                            */}
                             {isThinking && (
                                 messages.length === 0 ||
-                                messages[messages.length - 1]?.role === 'user' ||
-                                (messages[messages.length - 1]?.role === 'assistant' &&
-                                    !(messages[messages.length - 1] as any).toolInvocations?.length
-                                )
+                                messages[messages.length - 1]?.role === 'user'
                             ) && (
-                                    <ThinkingAnimation />
-                                )}
+                                <ThinkingAnimation />
+                            )}
 
                             <div ref={bottomRef} />
                         </>
@@ -123,7 +136,7 @@ export function ChatContainer({ className }: ChatContainerProps) {
 
                         isThinking={isThinking}
                         status={status}
-                        disabled={!activeChat && messages.length > 0}
+                        disabled={!chatId && messages.length > 0}
                     />
                 </div>
             </div>

@@ -6,7 +6,8 @@ import { useMemo } from 'react'
 // Define ExtendedMessage locally as it is an extension for the UI
 interface ExtendedMessage extends Partial<Message> {
     toolInvocations?: UIToolInvocation<any>[]
-    content: string
+    content?: string
+    parts?: Array<{ type: string; text?: string }>
     metadata?: any
     sections?: any[]
     charts?: any[]
@@ -19,48 +20,56 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
         // 1. Live Tool Invocations (Streaming)
         // Check for the "generate_ui_blocks" tool
         const toolInvocations = message.toolInvocations || []
+        // #region agent log
+        if (message.role === 'assistant') {
+            fetch('http://127.0.0.1:7242/ingest/8349c17a-640e-4305-bf28-6c651baadf11',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-structured-response.ts:22',message:'Checking tool invocations',data:{toolInvocationsCount:toolInvocations.length,toolNames:toolInvocations.map((t:any)=>t.toolName||t.title||'unknown'),hasBlockTool:!!toolInvocations.find((t:any)=>(t.toolName==='generate_ui_blocks'||t.title==='generate_ui_blocks'))},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        }
+        // #endregion
         const blockTool = toolInvocations.find(
             t => (t as any).toolName === 'generate_ui_blocks' || (t as any).title === 'generate_ui_blocks'
         )
 
         if (blockTool) {
             const t = blockTool as any
-            
-            // Debug: Log the full tool invocation structure
-            console.log('🔧 Block Tool Found:', {
-                toolName: t.toolName,
-                state: t.state,
-                hasArgs: !!t.args,
-                hasInput: !!t.input,
-                hasOutput: !!t.output,
-                hasResult: !!t.result,
-                blocksInArgs: t.args?.blocks?.length,
-                blocksInInput: t.input?.blocks?.length,
-                blocksInOutput: t.output?.blocks?.length,
-            })
-            
+
             // Determine streaming state based on tool invocation state
             // AI SDK v6 states: 'partial-call', 'call', 'result'
             // AI SDK v5 states: 'input-streaming', 'input-available', 'output-available'
             const toolState = t.state || ''
-            const isStreaming = !toolState.includes('result') && !toolState.includes('output')
-            
+            // 'call' and 'result' states mean the tool call is complete
+            const isComplete = toolState === 'result' || toolState === 'call'
+            // If not complete, we're still streaming
+            const isStreaming = !isComplete
+
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/8349c17a-640e-4305-bf28-6c651baadf11',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-structured-response.ts:27',message:'Block tool detected - streaming state',data:{toolState,isComplete,isStreaming,hasInput:!!t.input,hasOutput:!!t.output,hasResult:!!t.result,hasArgs:!!t.args,inputKeys:t.input?Object.keys(t.input):[],outputKeys:t.output?Object.keys(t.output):[]},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
+
             // For streaming: prefer 'input' or 'args' when streaming, 'output'/'result' when complete
             // During streaming, data arrives incrementally in input/args
+            // For 'call' state (UI tools), the data is in 'input' or 'args'
             let data: any = {}
-            
-            if (t.output || t.result) {
-                // Tool is complete, use final output
-                data = t.output || t.result
-            } else if (t.input || t.args) {
-                // Tool is streaming, use partial input
-                data = t.input || t.args
+
+            if (t.output && Object.keys(t.output).length > 0) {
+                // Tool has output, use it
+                data = t.output
+            } else if (t.result && Object.keys(t.result).length > 0) {
+                // Tool has result, use it
+                data = t.result
+            } else if (t.input) {
+                // Tool is streaming or 'call' state, use input
+                data = t.input
+            } else if (t.args) {
+                // Fallback to args
+                data = t.args
             }
 
             const blocks = (data.blocks || []) as UIBlock[]
             const sources = (data.sources || []) as Source[]
-            
-            console.log('🎨 Rendering blocks:', { count: blocks.length, isStreaming, state: toolState })
+
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/8349c17a-640e-4305-bf28-6c651baadf11',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'use-structured-response.ts:58',message:'Returning structured response',data:{blocksCount:blocks.length,isStreaming,hasSources:!!sources.length},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
 
             return { blocks, sources, isStreaming }
         }
@@ -94,7 +103,14 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
         const legacyBlocks: UIBlock[] = []
 
         // Text content -> TextBlock
-        const textContent = message.content
+        // Check both 'content' string and 'parts' array (UIMessage format)
+        let textContent = message.content || ''
+        if (!textContent && message.parts) {
+            textContent = message.parts
+                .filter(p => p.type === 'text' && p.text)
+                .map(p => p.text)
+                .join('')
+        }
         if (textContent) {
             legacyBlocks.push({ type: 'text', content: textContent })
         }

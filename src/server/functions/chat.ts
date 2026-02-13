@@ -77,7 +77,7 @@ export const getChat = createServerFn()
         })
 
         if (!chat) {
-            throw notFound('Chat not found')
+            return { chat: null }
         }
 
         // Return with cast to fix type inference

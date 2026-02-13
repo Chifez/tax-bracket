@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
 import { useResetPassword } from '@/hooks/use-auth'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -12,6 +12,11 @@ export const Route = createFileRoute('/auth/reset-password')({
             token: typeof search.token === 'string' ? search.token : '',
         }
     },
+    beforeLoad: ({ search }) => {
+        if (!search.token) {
+            throw redirect({ to: '/' })
+        }
+    }
 })
 
 function ResetPasswordPage() {
@@ -22,13 +27,6 @@ function ResetPasswordPage() {
     const [error, setError] = useState('')
     const [success, setSuccess] = useState(false)
     const { mutate: resetPassword, isPending } = useResetPassword()
-
-    // Redirect if no token
-    useEffect(() => {
-        if (!token) {
-            navigate({ to: '/' })
-        }
-    }, [token, navigate])
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
