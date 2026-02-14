@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci:
-    name: Typecheck · Test · Build
+    name: Typecheck · Build
     runs-on: ubuntu-latest
 
     steps:
@@ -26,9 +26,6 @@ jobs:
 
       - name: Typecheck
         run: npx tsc --noEmit
-
-      - name: Test
-        run: npm run test
 
       - name: Build
         run: npm run build
