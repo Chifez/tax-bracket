@@ -1,4 +1,4 @@
-// Database schema exports
+﻿// Database schema exports
 export * from './users'
 export * from './sessions'
 export * from './password-reset-tokens'
@@ -10,3 +10,6 @@ export * from './upload-batches'
 export * from './transactions'
 export * from './tax-aggregates'
 export * from './tax-context'
+export * from './credit-purchases'
+export * from './knowledge-chunks'
+export * from './credit-transactions'

@@ -9,6 +9,8 @@ import { uploadBatches } from './upload-batches'
 import { transactions } from './transactions'
 import { taxAggregates } from './tax-aggregates'
 import { taxContext } from './tax-context'
+import { creditPurchases } from './credit-purchases'
+import { creditTransactions } from './credit-transactions'
 
 export const usersRelations = relations(users, ({ many }) => ({
     sessions: many(sessions),
@@ -19,6 +21,8 @@ export const usersRelations = relations(users, ({ many }) => ({
     transactions: many(transactions),
     taxAggregates: many(taxAggregates),
     taxContexts: many(taxContext),
+    creditPurchases: many(creditPurchases),
+    creditTransactions: many(creditTransactions),
 }))
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -99,6 +103,20 @@ export const taxAggregatesRelations = relations(taxAggregates, ({ one }) => ({
 export const taxContextRelations = relations(taxContext, ({ one }) => ({
     user: one(users, {
         fields: [taxContext.userId],
+        references: [users.id],
+    }),
+}))
+
+export const creditPurchasesRelations = relations(creditPurchases, ({ one }) => ({
+    user: one(users, {
+        fields: [creditPurchases.userId],
+        references: [users.id],
+    }),
+}))
+
+export const creditTransactionsRelations = relations(creditTransactions, ({ one }) => ({
+    user: one(users, {
+        fields: [creditTransactions.userId],
         references: [users.id],
     }),
 }))
