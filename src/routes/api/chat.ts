@@ -8,6 +8,8 @@ import { getAuthenticatedUser } from '@/server/middleware/auth'
 import { generateChatTitle } from '@/server/functions/ai'
 import { z } from 'zod'
 import { systemPrompt } from '@/server/data/system-prompt'
+import { checkCreditsMiddleware, createInsufficientCreditsResponse } from '@/server/middleware/credits'
+import { deductCredits } from '@/server/lib/credits'
 
 export const Route = createFileRoute('/api/chat')({
     server: {
@@ -16,6 +18,12 @@ export const Route = createFileRoute('/api/chat')({
                 const user = await getAuthenticatedUser()
                 if (!user) {
                     return new Response('Unauthorized', { status: 401 })
+                }
+
+                // Check if user has sufficient credits
+                const creditCheck = await checkCreditsMiddleware(user.id)
+                if (!creditCheck.allowed) {
+                    return createInsufficientCreditsResponse(creditCheck.resetAt)
                 }
 
                 const { messages: incomingMessages, chatId: existingChatId, content: legacyContent, fileIds } = await request.json() as {
@@ -122,6 +130,10 @@ export const Route = createFileRoute('/api/chat')({
 
                 const convertedMessages = await convertToModelMessages(incomingMessages)
 
+                // Generate a unique request ID for idempotent credit deduction
+                const lastMessageId = lastMessage?.id || crypto.randomUUID()
+                const requestId = `chat-${chatId}-msg-${lastMessageId}`
+
                 const result = streamText({
                     model: openai('gpt-4o'),
                     system: systemMessage,
@@ -162,10 +174,20 @@ export const Route = createFileRoute('/api/chat')({
                     onError: (error) => {
                         console.error('Generative UI Error:', error)
                     },
-                    onFinish: async ({ text, toolCalls, finishReason }) => {
-                        console.log('AI Generation Finished:', { text, toolCallsCount: toolCalls?.length, finishReason })
-                        if (toolCalls?.length) {
-                            console.log('Tool Calls:', JSON.stringify(toolCalls, null, 2))
+                    onFinish: async ({ text, toolCalls, usage }) => {
+                        // Deduct credits based on actual token usage (idempotent via requestId)
+                        if (usage) {
+                            const totalTokens = usage.totalTokens || ((usage.inputTokens || 0) + (usage.outputTokens || 0))
+                            if (totalTokens > 0) {
+                                try {
+                                    const deductResult = await deductCredits(user.id, totalTokens, requestId)
+                                    if (deductResult.success) {
+                                        console.log(`Credits deducted: ${deductResult.creditsDeducted} credits (${totalTokens} tokens) for user ${user.id}. Remaining: ${deductResult.remaining}`)
+                                    }
+                                } catch (error) {
+                                    console.error('Failed to deduct credits:', error)
+                                }
+                            }
                         }
 
                         // Extract structured data from tool calls
@@ -223,7 +245,8 @@ export const Route = createFileRoute('/api/chat')({
                 return result.toUIMessageStreamResponse({
                     headers: {
                         'x-chat-id': chatId,
-                        'x-is-new-chat': isNewChat ? 'true' : 'false'
+                        'x-is-new-chat': isNewChat ? 'true' : 'false',
+                        ...creditCheck.headers,
                     }
                 })
             },
