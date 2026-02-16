@@ -1,7 +1,8 @@
 import type { Message } from '@/types'
 import type { UIToolInvocation } from 'ai'
 import type { StructuredResponse, UIBlock, Source } from '@/components/chat/blocks/types'
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
+import { parsePartialJSON, mergeBlocks } from '@/lib/partial-json-parser'
 
 interface ExtendedMessage extends Partial<Message> {
     toolInvocations?: UIToolInvocation<any>[]
@@ -14,7 +15,9 @@ interface ExtendedMessage extends Partial<Message> {
     sources?: any[]
 }
 
-export function useStructuredResponse(message: ExtendedMessage): StructuredResponse {
+export function useStructuredResponse(message: ExtendedMessage): StructuredResponse & { partialBlock?: Partial<UIBlock> } {
+    const previousBlocksRef = useRef<UIBlock[]>([])
+
     return useMemo(() => {
         const toolInvocations = message.toolInvocations || []
         const blockTool = toolInvocations.find(
@@ -32,21 +35,49 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
 
             // Prefer 'input'/'args' when streaming, 'output'/'result' when complete
             let data: any = {}
+            let rawInput: string | null = null
 
             if (t.output && Object.keys(t.output).length > 0) {
                 data = t.output
             } else if (t.result && Object.keys(t.result).length > 0) {
                 data = t.result
             } else if (t.input) {
-                data = t.input
+                // During streaming, input might be a partial JSON string
+                if (typeof t.input === 'string') {
+                    rawInput = t.input
+                } else {
+                    data = t.input
+                }
             } else if (t.args) {
-                data = t.args
+                if (typeof t.args === 'string') {
+                    rawInput = t.args
+                } else {
+                    data = t.args
+                }
             }
 
-            const blocks = (data.blocks || []) as UIBlock[]
-            const sources = (data.sources || []) as Source[]
+            // Use partial JSON parser for streaming
+            let blocks: UIBlock[] = []
+            let sources: Source[] = []
+            let partialBlock: Partial<UIBlock> | undefined
 
-            return { blocks, sources, isStreaming }
+            if (rawInput && isStreaming) {
+                // Parse partial JSON to extract blocks incrementally
+                const parseResult = parsePartialJSON(rawInput)
+                blocks = parseResult.blocks as UIBlock[]
+                partialBlock = parseResult.partialBlock as Partial<UIBlock> | undefined
+
+                // Merge with previous blocks to prevent flicker
+                blocks = mergeBlocks(previousBlocksRef.current, blocks) as UIBlock[]
+                previousBlocksRef.current = blocks
+            } else {
+                // Complete or already parsed data
+                blocks = (data.blocks || []) as UIBlock[]
+                sources = (data.sources || []) as Source[]
+                previousBlocksRef.current = blocks
+            }
+
+            return { blocks, sources, isStreaming, partialBlock }
         }
 
         let metadata = message.metadata as any
