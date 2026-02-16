@@ -8,6 +8,7 @@ import { Settings, LogOut } from 'lucide-react'
 import { SidebarNavItems, SidebarChatList, ThemeToggle, SidebarButton, type NavItem, ProfileDropdown } from './sidebar/index'
 import { useUser, useLogout } from '@/hooks/use-auth'
 import { useChats } from '@/hooks/use-chat'
+import { CreditDisplay } from '@/components/credits'
 
 
 interface SidebarProps {
@@ -82,7 +83,16 @@ export function Sidebar({ className, onNavAction }: SidebarProps) {
 
             <Separator />
 
+            
+
+            
+
             <div className="flex-col gap-1 p-2 shrink-0 flex">
+            {user && (
+                <div>
+                    <CreditDisplay isCollapsed={!isSidebarOpen} />
+                </div>
+            )}
                 <SidebarButton
                     isCollapsed={!isSidebarOpen}
                     tooltip="Theme"
