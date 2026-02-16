@@ -13,10 +13,13 @@ import { Route as UploadsRouteImport } from './routes/uploads'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PaymentsSuccessRouteImport } from './routes/payments/success'
+import { Route as PaymentsCancelRouteImport } from './routes/payments/cancel'
 import { Route as ChatsChatIdRouteImport } from './routes/chats/$chatId'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google/callback'
+import { Route as ApiWebhooksPolarRouteImport } from './routes/api/webhooks/polar'
 
 const UploadsRoute = UploadsRouteImport.update({
   id: '/uploads',
@@ -36,6 +39,16 @@ const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentsSuccessRoute = PaymentsSuccessRouteImport.update({
+  id: '/payments/success',
+  path: '/payments/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentsCancelRoute = PaymentsCancelRouteImport.update({
+  id: '/payments/cancel',
+  path: '/payments/cancel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatsChatIdRoute = ChatsChatIdRouteImport.update({
@@ -58,6 +71,11 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
   path: '/auth/google/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWebhooksPolarRoute = ApiWebhooksPolarRouteImport.update({
+  id: '/api/webhooks/polar',
+  path: '/api/webhooks/polar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -67,6 +85,9 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
+  '/payments/cancel': typeof PaymentsCancelRoute
+  '/payments/success': typeof PaymentsSuccessRoute
+  '/api/webhooks/polar': typeof ApiWebhooksPolarRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +98,9 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
+  '/payments/cancel': typeof PaymentsCancelRoute
+  '/payments/success': typeof PaymentsSuccessRoute
+  '/api/webhooks/polar': typeof ApiWebhooksPolarRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRoutesById {
@@ -88,6 +112,9 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/chats/$chatId': typeof ChatsChatIdRoute
+  '/payments/cancel': typeof PaymentsCancelRoute
+  '/payments/success': typeof PaymentsSuccessRoute
+  '/api/webhooks/polar': typeof ApiWebhooksPolarRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +127,9 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/auth/reset-password'
     | '/chats/$chatId'
+    | '/payments/cancel'
+    | '/payments/success'
+    | '/api/webhooks/polar'
     | '/auth/google/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +140,9 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/auth/reset-password'
     | '/chats/$chatId'
+    | '/payments/cancel'
+    | '/payments/success'
+    | '/api/webhooks/polar'
     | '/auth/google/callback'
   id:
     | '__root__'
@@ -120,6 +153,9 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/auth/reset-password'
     | '/chats/$chatId'
+    | '/payments/cancel'
+    | '/payments/success'
+    | '/api/webhooks/polar'
     | '/auth/google/callback'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +167,9 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   ChatsChatIdRoute: typeof ChatsChatIdRoute
+  PaymentsCancelRoute: typeof PaymentsCancelRoute
+  PaymentsSuccessRoute: typeof PaymentsSuccessRoute
+  ApiWebhooksPolarRoute: typeof ApiWebhooksPolarRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
 }
 
@@ -164,6 +203,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/payments/success': {
+      id: '/payments/success'
+      path: '/payments/success'
+      fullPath: '/payments/success'
+      preLoaderRoute: typeof PaymentsSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payments/cancel': {
+      id: '/payments/cancel'
+      path: '/payments/cancel'
+      fullPath: '/payments/cancel'
+      preLoaderRoute: typeof PaymentsCancelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chats/$chatId': {
       id: '/chats/$chatId'
       path: '/chats/$chatId'
@@ -192,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthGoogleCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/polar': {
+      id: '/api/webhooks/polar'
+      path: '/api/webhooks/polar'
+      fullPath: '/api/webhooks/polar'
+      preLoaderRoute: typeof ApiWebhooksPolarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -203,6 +263,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
   ChatsChatIdRoute: ChatsChatIdRoute,
+  PaymentsCancelRoute: PaymentsCancelRoute,
+  PaymentsSuccessRoute: PaymentsSuccessRoute,
+  ApiWebhooksPolarRoute: ApiWebhooksPolarRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport

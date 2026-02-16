@@ -22,6 +22,34 @@
       "when": 1770858466144,
       "tag": "0002_tricky_mentallo",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1771021239902,
+      "tag": "0003_same_johnny_blaze",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771099200000,
+      "tag": "0004_add_credit_purchases",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771099300000,
+      "tag": "0005_add_knowledge_chunks",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771200000000,
+      "tag": "0006_add_credit_transactions",
+      "breakpoints": true
     }
   ]
 }
