@@ -1,4 +1,6 @@
 import { startFileProcessor } from '@/workers/file-processor'
+import { startAggregationWorker } from '@/workers/aggregation-worker'
+import { registerCreditResetJob } from '@/server/jobs/reset-credits'
 import { getQueue } from '@/server/lib/queue'
 import dotenv from 'dotenv'
 
@@ -6,14 +8,41 @@ dotenv.config()
 
 async function main() {
     console.log('Starting worker process...')
+    console.log('Environment:', {
+        NODE_ENV: process.env.NODE_ENV,
+        DATABASE_URL: process.env.DATABASE_URL ? '[set]' : '[not set]',
+    })
 
     // Initialize DB/Queue
-    await getQueue()
+    const queue = await getQueue()
 
     // Start processors
     await startFileProcessor()
+    await startAggregationWorker()
 
-    console.log('Worker process running.')
+    // Register scheduled jobs
+    await registerCreditResetJob()
+
+    console.log('Worker process running. Press Ctrl+C to stop.')
+
+    // Graceful shutdown handler
+    const shutdown = async () => {
+        console.log('\nShutting down worker...')
+        try {
+            await queue.stop()
+            console.log('Worker stopped gracefully.')
+            process.exit(0)
+        } catch (error) {
+            console.error('Error during shutdown:', error)
+            process.exit(1)
+        }
+    }
+
+    process.on('SIGINT', shutdown)
+    process.on('SIGTERM', shutdown)
 }
 
-main().catch(console.error)
+main().catch((error) => {
+    console.error('Worker failed to start:', error)
+    process.exit(1)
+})
