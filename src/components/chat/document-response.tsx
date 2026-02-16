@@ -26,7 +26,7 @@ interface DocumentResponseProps {
 
 export function DocumentResponse({ message, className, isStreaming: parentIsStreaming }: DocumentResponseProps) {
     const [isExpanded, setIsExpanded] = useState(true)
-    const { blocks, sources, isStreaming: hookIsStreaming } = useStructuredResponse(message)
+    const { blocks, sources, isStreaming: hookIsStreaming, partialBlock } = useStructuredResponse(message)
     
     // Keep "Generating Response" visible until blocks appear (even if status changes to 'ready')
     const wasStreamingRef = useRef(false)
@@ -108,7 +108,7 @@ export function DocumentResponse({ message, className, isStreaming: parentIsStre
                     </button>
                 )}
 
-                {isExpanded && blockCount > 0 && (
+                {isExpanded && (blockCount > 0 || (isStreaming && partialBlock)) && (
                     <div className="space-y-4">
                         {blocks.map((block, index) => (
                             <BlockRenderer
@@ -119,6 +119,16 @@ export function DocumentResponse({ message, className, isStreaming: parentIsStre
                                 isStreaming={isStreaming && index === blocks.length - 1}
                             />
                         ))}
+                        {/* Show skeleton for partial block being streamed */}
+                        {isStreaming && partialBlock && partialBlock.type && (
+                            <BlockRenderer
+                                key="partial-block"
+                                block={partialBlock as any}
+                                index={blocks.length}
+                                sources={sources}
+                                isStreaming={true}
+                            />
+                        )}
                     </div>
                 )}
 
