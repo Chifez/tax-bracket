@@ -1,290 +1,345 @@
-Welcome to your new TanStack app! 
+<div align="center">
+  <a href="https://taxbracketai.com">
+    <img src="./public/og-image.png" alt="TaxBracket AI" width="100%" style="max-width: 1200px; border-radius: 12px;"/>
+  </a>
+  
+  <h1>TaxBracket AI</h1>
+  
+  <p><strong>AI-powered financial assistant for Nigerian tax calculations and bank statement analysis</strong></p>
 
-# Getting Started
+  <p>
+    <a href="https://github.com/taxbracket/taxbracket/stargazers">
+      <img src="https://img.shields.io/github/stars/taxbracket/taxbracket?style=social" alt="GitHub stars"/>
+    </a>
+    <a href="https://github.com/taxbracket/taxbracket/network/members">
+      <img src="https://img.shields.io/github/forks/taxbracket/taxbracket?style=social" alt="GitHub forks"/>
+    </a>
+    <a href="https://github.com/taxbracket/taxbracket/issues">
+      <img src="https://img.shields.io/github/issues/taxbracket/taxbracket" alt="GitHub issues"/>
+    </a>
+    <a href="https://github.com/taxbracket/taxbracket/blob/main/LICENSE">
+      <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"/>
+    </a>
+  </p>
+  
+  <p>
+    <a href="https://taxbracketai.com">Live Demo</a>
+    ·
+    <a href="#features">Features</a>
+    ·
+    <a href="#getting-started">Getting Started</a>
+    ·
+    <a href="#contributing">Contributing</a>
+  </p>
+</div>
 
-To run this application:
+---
+
+## About
+
+TaxBracket AI is an intelligent financial assistant designed specifically for Nigerian taxpayers, accountants, and financial advisors. Upload your bank statements, get instant tax calculations based on the Nigeria Tax Act 2025, and receive AI-powered insights about your financial data.
+
+### Why TaxBracket?
+
+- **Nigerian Tax Expertise**: Built with deep knowledge of Nigerian tax laws, brackets, and regulations
+- **Bank Statement Analysis**: Automatically parse and analyze PDF, CSV, and Excel bank statements
+- **AI-Powered Insights**: Get intelligent recommendations and calculations powered by GPT-4
+- **Privacy First**: Your financial data stays secure with bank-level encryption
+
+---
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Bank Statement Analysis** | Upload PDF, CSV, or XLSX bank statements for automatic parsing |
+| **Tax Calculations** | Accurate calculations based on Nigeria Tax Act 2025 (effective 2026) |
+| **Financial Insights** | Visual charts and data visualizations of your finances |
+| **Bank Charge Detection** | Automatic identification of fees, charges, and deductions |
+| **Transaction Categorization** | Smart categorization of income, expenses, and deductions |
+| **Rent Relief Calculation** | Automatic rent relief deductions based on Nigerian tax law |
+| **Real-time Streaming** | Responses stream in real-time with incremental block rendering |
+| **Credit System** | Flexible credit-based usage with weekly resets or purchased credits |
+
+---
+
+## Tech Stack
+
+| Category | Technologies |
+|----------|--------------|
+| **Framework** | [TanStack Start](https://tanstack.com/start) (React, SSR, File-based routing) |
+| **Database** | PostgreSQL with [Drizzle ORM](https://orm.drizzle.team/) |
+| **AI** | [OpenAI GPT-4o](https://openai.com/) via [Vercel AI SDK](https://sdk.vercel.ai/) |
+| **Styling** | [Tailwind CSS](https://tailwindcss.com/) |
+| **Storage** | [Cloudflare R2](https://www.cloudflare.com/r2/) (S3-compatible) |
+| **Queue** | [pg-boss](https://github.com/timgit/pg-boss) (PostgreSQL-based job queue) |
+| **Authentication** | Custom session-based auth with Google OAuth |
+| **Charts** | [Recharts](https://recharts.org/) |
+| **Payments** | [Polar](https://polar.sh/) (optional, for credit purchases) |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Node.js** 18+
+- **PostgreSQL** 14+
+- **npm** or **yarn**
+- **OpenAI API key** (for AI features)
+
+### Installation
+
+1. **Clone the repository**
+
+```bash
+git clone https://github.com/taxbracket/taxbracket.git
+cd taxbracket
+```
+
+2. **Install dependencies**
 
 ```bash
 npm install
+```
+
+3. **Set up environment variables**
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your configuration:
+
+```bash
+# Required
+DATABASE_URL=postgresql://postgres:password@localhost:5432/taxbracket
+SESSION_SECRET=your-secure-random-secret-min-32-chars
+OPENAI_API_KEY=sk-...
+
+# Required for file uploads
+CLOUDFLARE_ACCOUNT_ID=your-account-id
+CLOUDFLARE_ACCESS_KEY=your-access-key
+CLOUDFLARE_SECRET_ACCESS_KEY=your-secret-access-key
+S3_BUCKET_NAME=taxbracket-uploads
+
+# Required for OAuth
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
+```
+
+4. **Run database migrations**
+
+```bash
+npm run db:migrate
+```
+
+5. **Start the development server**
+
+```bash
 npm run dev
 ```
 
-# Building For Production
+6. **Start the worker (for file processing)**
 
-To build this application for production:
-
-```bash
-npm run build
-```
-
-## Testing
-
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+In a separate terminal:
 
 ```bash
-npm run test
+npx tsx scripts/worker.ts
 ```
 
-## Styling
+Visit [http://localhost:3000](http://localhost:3000) to see the application.
 
-This project uses CSS for styling.
+---
 
+## Project Structure
 
-
-
-## Routing
-This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add another a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
+```
+taxbracket/
+├── src/
+│   ├── components/     # React components
+│   │   ├── chat/       # Chat interface components
+│   │   ├── charts/     # Chart and visualization components
+│   │   ├── credits/    # Credit system UI
+│   │   ├── layout/     # Layout components (sidebar, header)
+│   │   └── ui/         # Base UI components
+│   ├── db/             # Database schema and migrations
+│   ├── hooks/          # React hooks
+│   ├── lib/            # Utility functions
+│   ├── routes/         # File-based routes
+│   │   └── api/        # API routes
+│   ├── server/         # Server-side code
+│   │   ├── data/       # System prompts and static data
+│   │   ├── functions/  # Server functions
+│   │   ├── jobs/       # Background jobs
+│   │   ├── lib/        # Server utilities
+│   │   └── middleware/ # Request middleware
+│   └── workers/        # Background workers
+├── drizzle/            # Database migrations
+├── public/             # Static assets
+└── scripts/            # CLI scripts
 ```
 
-Then anywhere in your JSX you can use it like so:
+---
 
-```tsx
-<Link to="/about">About</Link>
-```
+## Configuration
 
-This will create a link that will navigate to the `/about` route.
+### Environment Variables
 
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `SESSION_SECRET` | Yes | Session encryption key (min 32 chars) |
+| `OPENAI_API_KEY` | Yes | OpenAI API key for AI features |
+| `CLOUDFLARE_*` | Yes | Cloudflare R2 credentials for file storage |
+| `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
+| `SITE_URL` | No | Production URL (default: https://taxbracketai.com) |
+| `CREDITS_WEEKLY_LIMIT` | No | Weekly credit limit (default: 1000) |
+| `CREDITS_PER_TOKEN` | No | Credit-to-token ratio (default: 0.1) |
+| `BETA_MODE` | No | Enable beta features (default: true) |
+| `CREDIT_PURCHASE_ENABLED` | No | Enable credit purchases (default: false) |
+| `POLAR_API_KEY` | No | Polar API key for payments |
 
-### Using A Layout
+---
 
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you use the `<Outlet />` component.
+## Development
 
-Here is an example layout that includes a header:
-
-```tsx
-import { Outlet, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-
-import { Link } from "@tanstack/react-router";
-
-export const Route = createRootRoute({
-  component: () => (
-    <>
-      <header>
-        <nav>
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-        </nav>
-      </header>
-      <Outlet />
-      <TanStackRouterDevtools />
-    </>
-  ),
-})
-```
-
-The `<TanStackRouterDevtools />` component is not required so you can remove it if you don't want it in your layout.
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-const peopleRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/people",
-  loader: async () => {
-    const response = await fetch("https://swapi.dev/api/people");
-    return response.json() as Promise<{
-      results: {
-        name: string;
-      }[];
-    }>;
-  },
-  component: () => {
-    const data = peopleRoute.useLoaderData();
-    return (
-      <ul>
-        {data.results.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    );
-  },
-});
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-### React-Query
-
-React-Query is an excellent addition or alternative to route loading and integrating it into you application is a breeze.
-
-First add your dependencies:
+### Available Scripts
 
 ```bash
-npm install @tanstack/react-query @tanstack/react-query-devtools
+# Development
+npm run dev           # Start dev server
+npm run build         # Build for production
+npm run start         # Start production server
+
+# Database
+npm run db:generate   # Generate migrations
+npm run db:migrate    # Run migrations
+npm run db:studio     # Open Drizzle Studio
+
+# Testing
+npm run test          # Run tests
+npm run typecheck     # TypeScript type checking
+npm run lint          # ESLint
 ```
 
-Next we'll need to create a query client and provider. We recommend putting those in `main.tsx`.
+### Running the Worker
 
-```tsx
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-// ...
-
-const queryClient = new QueryClient();
-
-// ...
-
-if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement);
-
-  root.render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  );
-}
-```
-
-You can also add TanStack Query Devtools to the root route (optional).
-
-```tsx
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-
-const rootRoute = createRootRoute({
-  component: () => (
-    <>
-      <Outlet />
-      <ReactQueryDevtools buttonPosition="top-right" />
-      <TanStackRouterDevtools />
-    </>
-  ),
-});
-```
-
-Now you can use `useQuery` to fetch your data.
-
-```tsx
-import { useQuery } from "@tanstack/react-query";
-
-import "./App.css";
-
-function App() {
-  const { data } = useQuery({
-    queryKey: ["people"],
-    queryFn: () =>
-      fetch("https://swapi.dev/api/people")
-        .then((res) => res.json())
-        .then((data) => data.results as { name: string }[]),
-    initialData: [],
-  });
-
-  return (
-    <div>
-      <ul>
-        {data.map((person) => (
-          <li key={person.name}>{person.name}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-export default App;
-```
-
-You can find out everything you need to know on how to use React-Query in the [React-Query documentation](https://tanstack.com/query/latest/docs/framework/react/overview).
-
-## State Management
-
-Another common requirement for React applications is state management. There are many options for state management in React. TanStack Store provides a great starting point for your project.
-
-First you need to add TanStack Store as a dependency:
+The worker handles file processing and scheduled jobs:
 
 ```bash
-npm install @tanstack/store
+# Development
+npx tsx scripts/worker.ts
+
+# Production (Railway)
+# Use separate service with railway.worker.json config
 ```
 
-Now let's create a simple counter in the `src/App.tsx` file as a demonstration.
+---
 
-```tsx
-import { useStore } from "@tanstack/react-store";
-import { Store } from "@tanstack/store";
-import "./App.css";
+## Deployment
 
-const countStore = new Store(0);
+### Vercel
 
-function App() {
-  const count = useStore(countStore);
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-    </div>
-  );
-}
+1. Connect your GitHub repository to Vercel
+2. Set environment variables in Vercel dashboard
+3. Deploy
 
-export default App;
+### Railway
+
+1. Create a new project from GitHub
+2. Add PostgreSQL service
+3. Set environment variables
+4. Create separate service for worker using `railway.worker.json`
+
+---
+
+## Contributing
+
+We welcome contributions! Please follow these guidelines:
+
+### How to Contribute
+
+1. **Fork the repository** and create a feature branch
+2. **Make your changes** following our code style
+3. **Add tests** for new features
+4. **Update documentation** as needed
+5. **Submit a pull request** with a clear description
+
+### Development Workflow
+
+```bash
+# 1. Fork and clone
+git clone https://github.com/YOUR_USERNAME/taxbracket.git
+cd taxbracket
+
+# 2. Create a branch
+git checkout -b feature/amazing-feature
+
+# 3. Make changes and commit
+git commit -m 'Add amazing feature'
+
+# 4. Push and create PR
+git push origin feature/amazing-feature
 ```
 
-One of the many nice features of TanStack Store is the ability to derive state from other state. That derived state will update when the base state updates.
+### Code Style
 
-Let's check this out by doubling the count using derived state.
+- Follow TypeScript best practices
+- Use Prettier for formatting (`npm run format`)
+- Write meaningful commit messages
+- Add JSDoc comments for complex functions
+- Follow the existing project structure
 
-```tsx
-import { useStore } from "@tanstack/react-store";
-import { Store, Derived } from "@tanstack/store";
-import "./App.css";
+### Reporting Issues
 
-const countStore = new Store(0);
+- Use GitHub Issues for bug reports and feature requests
+- Include reproduction steps for bugs
+- Search existing issues before creating new ones
 
-const doubledStore = new Derived({
-  fn: () => countStore.state * 2,
-  deps: [countStore],
-});
-doubledStore.mount();
+---
 
-function App() {
-  const count = useStore(countStore);
-  const doubledCount = useStore(doubledStore);
+## Roadmap
 
-  return (
-    <div>
-      <button onClick={() => countStore.setState((n) => n + 1)}>
-        Increment - {count}
-      </button>
-      <div>Doubled - {doubledCount}</div>
-    </div>
-  );
-}
+- [ ] **RAG Implementation** - Reduce token usage with vector-based retrieval
+- [ ] **Template Responses** - Fast responses for common queries
+- [ ] **Response Caching** - Cache frequent calculations
+- [ ] **Mobile App** - React Native mobile application
+- [ ] **Multi-language** - Support for Hausa, Yoruba, and Igbo
+- [ ] **Tax Filing** - Direct FIRS integration for tax filing
 
-export default App;
-```
+---
 
-We use the `Derived` class to create a new store that is derived from another store. The `Derived` class has a `mount` method that will start the derived store updating.
+## License
 
-Once we've created the derived store we can use it in the `App` component just like we would any other store using the `useStore` hook.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-You can find out everything you need to know on how to use TanStack Store in the [TanStack Store documentation](https://tanstack.com/store/latest).
+---
 
-# Demo files
+## Acknowledgments
 
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
+- Built with [TanStack Start](https://tanstack.com/start)
+- AI powered by [OpenAI](https://openai.com)
+- UI components inspired by [shadcn/ui](https://ui.shadcn.com)
+- Charts by [Recharts](https://recharts.org)
+- Icons by [Lucide](https://lucide.dev)
 
-# Learn More
+---
 
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
+## Support
+
+- [GitHub Issues](https://github.com/taxbracket/taxbracket/issues) - Bug reports and feature requests
+- [Discussions](https://github.com/taxbracket/taxbracket/discussions) - Questions and community
+
+---
+
+<div align="center">
+  <p>Made with love for Nigerian taxpayers</p>
+  <p>
+    <a href="https://taxbracketai.com">Website</a>
+    ·
+    <a href="https://twitter.com/taxbracketai">Twitter</a>
+  </p>
+</div>
