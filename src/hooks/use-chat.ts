@@ -9,6 +9,11 @@ import type { UIMessage } from 'ai'
 import { useRef } from 'react'
 import { generateId } from '@/lib/utils'
 
+// Check if error is a 429 insufficient credits response
+const checkInsufficientCredits = (error: any): boolean => {
+    return error?.message?.includes('Insufficient credits') || error?.message?.includes('429')
+}
+
 export const useChats = () => {
     return useQuery({
         queryKey: ['chats'],
@@ -84,6 +89,18 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
         },
         onError: (error) => {
             setThinking(false)
+
+            // Handle insufficient credits error specially
+            if (checkInsufficientCredits(error)) {
+                toast.error("You've used all your weekly credits. Credits reset every Monday.", {
+                    description: "Upgrade your plan or wait for the weekly reset.",
+                    duration: 8000,
+                })
+                // Invalidate credits query to refresh UI
+                queryClient.invalidateQueries({ queryKey: ['credits'] })
+                return
+            }
+
             toast.error("Error: " + error.message)
         }
     })
