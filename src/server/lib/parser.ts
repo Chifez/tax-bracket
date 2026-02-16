@@ -1,7 +1,23 @@
-// @ts-ignore
-import pdf from 'pdf-parse'
 import { parse } from 'csv-parse/sync'
 import * as XLSX from 'xlsx'
+
+// Dynamic import for pdf-parse (CJS module)
+type PdfParseFunction = (buffer: Buffer) => Promise<{ text: string }>
+let pdfParseFn: PdfParseFunction | null = null
+
+async function getPdfParser(): Promise<PdfParseFunction> {
+    if (!pdfParseFn) {
+        // pdf-parse has a complex export structure - handle both ESM and CJS
+        const module = await import('pdf-parse')
+        // Access the function - it may be on .default or directly on the module
+        const fn = (module as any).default ?? (module as any)
+        if (typeof fn !== 'function') {
+            throw new Error('Failed to load pdf-parse module')
+        }
+        pdfParseFn = fn as PdfParseFunction
+    }
+    return pdfParseFn!
+}
 
 // -------------------------------------------------------------------
 // Types
@@ -23,6 +39,7 @@ export interface ParsedFileResult {
 // -------------------------------------------------------------------
 
 export async function parsePdf(buffer: Buffer): Promise<ParsedFileResult> {
+    const pdf = await getPdfParser()
     const data = await pdf(buffer)
     const rawText = data.text as string
 
