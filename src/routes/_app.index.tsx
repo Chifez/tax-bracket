@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ChatContainer } from '@/components/chat'
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute('/_app/')({
   component: HomePage,
   head: () => ({
     meta: [

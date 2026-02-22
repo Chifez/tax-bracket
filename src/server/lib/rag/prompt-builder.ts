@@ -129,9 +129,9 @@ CAPABILITIES:
 /**
  * Get the full system prompt (fallback when RAG fails)
  */
+import { systemPrompt } from '@/server/data/system-prompt'
+
 export function getFullSystemPrompt(taxContext: CompactTaxContext | null): string {
-    // Import the original system prompt as fallback
-    const { systemPrompt } = require('@/server/data/system-prompt')
     return systemPrompt(taxContext)
 }
 

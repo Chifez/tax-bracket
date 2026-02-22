@@ -8,7 +8,7 @@ import { LogOut, MessageSquare, Settings, X } from 'lucide-react'
 import { navItems, type NavItem, ThemeToggle, ProfileDropdown, SidebarButton } from './sidebar/index'
 import { useUser, useLogout } from '@/hooks/use-auth'
 import { useChats } from '@/hooks/use-chat'
-
+import { CreditDisplay } from '@/components/credits'
 
 interface MobileSidebarProps {
     isOpen: boolean
@@ -133,6 +133,11 @@ export function MobileSidebar({ isOpen, onClose, onNavAction }: MobileSidebarPro
 
 
                 <div className="flex flex-col gap-1 p-2 shrink-0">
+                    {user && (
+                        <div className="mb-1">
+                            <CreditDisplay isCollapsed={false} />
+                        </div>
+                    )}
                     <SidebarButton
 
                         tooltip="Theme"

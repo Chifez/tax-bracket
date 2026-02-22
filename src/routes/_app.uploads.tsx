@@ -22,7 +22,7 @@ import {
   useTransactionSummary,
 } from '@/hooks/use-uploads'
 
-export const Route = createFileRoute('/uploads')({
+export const Route = createFileRoute('/_app/uploads')({
   component: UploadsPage,
   head: () => ({
     meta: [
@@ -91,9 +91,9 @@ function formatDate(date: string | Date): string {
 }
 
 function getFileIcon(mimeType: string) {
-  if (mimeType === 'application/pdf') return <FileText size={16} className="text-red-500" />
-  if (mimeType === 'text/csv') return <File size={16} className="text-green-500" />
-  if (mimeType?.includes('spreadsheet') || mimeType?.includes('excel')) return <File size={16} className="text-emerald-500" />
+  if (mimeType === 'application/pdf') return <FileText size={16} className='text-red-500' />
+  if (mimeType === 'text/csv') return <File size={16} className='text-green-500' />
+  if (mimeType?.includes('spreadsheet') || mimeType?.includes('excel')) return <File size={16} className='text-emerald-500' />
   return <File size={16} className="text-primary" />
 }
 

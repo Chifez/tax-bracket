@@ -1,6 +1,6 @@
 import { db } from '@/db'
 import { users } from '@/db/schema'
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { getFeatureFlags } from './feature-flags'
 import {
     getCreditBalance,
@@ -121,7 +121,7 @@ export async function getAvailableCredits(userId: string): Promise<{
     }
 
     const weekStart = getCurrentWeekStart()
-    
+
     // Calculate values from ledger
     const [totalBalance, weeklyUsed, purchasedCredits] = await Promise.all([
         getCreditBalance(userId),
@@ -217,7 +217,7 @@ export async function initializeUserCredits(userId: string): Promise<void> {
  */
 export async function resetAllUsersCredits(): Promise<{ count: number; skipped: boolean }> {
     const flags = getFeatureFlags()
-    
+
     // Only run weekly grants if weekly resets are enabled
     if (!flags.weeklyCreditsReset) {
         console.log('Weekly credit grant skipped: not in beta mode or purchases enabled')
@@ -225,7 +225,7 @@ export async function resetAllUsersCredits(): Promise<{ count: number; skipped: 
     }
 
     const weekDate = formatDateForReference(getCurrentWeekStart())
-    
+
     // Get all users
     const allUsers = await db.query.users.findMany({
         columns: {

@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 import { ThemeProvider } from '@/components/theme-provider'
-import { AppShell } from '@/components/layout'
+
 
 import globalsCss from '@/styles/globals.css?url'
 
@@ -235,9 +235,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-            <AppShell>
-              {children}
-            </AppShell>
+            {children}
             <Toaster position="top-center" richColors />
           </ThemeProvider>
           <TanStackDevtools

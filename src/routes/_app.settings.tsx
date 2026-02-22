@@ -6,7 +6,7 @@ import { ThemeToggle } from '@/components/layout/sidebar/theme-toggle'
 import { User, Settings as SettingsIcon, Shield, Bell } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-export const Route = createFileRoute('/settings')({
+export const Route = createFileRoute('/_app/settings')({
   component: SettingsPage,
   head: () => ({
     meta: [

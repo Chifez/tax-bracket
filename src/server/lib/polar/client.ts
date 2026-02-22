@@ -115,11 +115,15 @@ export function extractCheckoutData(event: unknown): {
     const e = event as {
         type: string
         data: {
-            id?: string
+            checkoutId?: string
             amount?: number
-            amount_total?: number
             metadata?: Record<string, string>
-            customer_email?: string
+            customer?: {
+                email?: string
+            }
+            items?: Array<{
+                amount?: number
+            }>
         }
     }
 
@@ -127,15 +131,21 @@ export function extractCheckoutData(event: unknown): {
         return null
     }
 
-    const checkoutId = e.data.id
-    // Polar uses amount or amount_total depending on the event
-    const amountCents = e.data.amount_total ?? e.data.amount ?? 0
+    const checkoutId = e.data.checkoutId
+    const amountCents = e.data.amount ?? e.data.items?.[0]?.amount ?? 0
     const userId = e.data.metadata?.userId ?? null
-    const customerEmail = e.data.customer_email ?? null
+    const customerEmail = e.data.customer?.email ?? null
 
     if (!checkoutId) {
         return null
     }
+
+    console.log('[DEBUG] Extracted Polar Checkout Data:', {
+        checkoutId,
+        amountCents,
+        userId,
+        customerEmail
+    });
 
     return {
         checkoutId,
@@ -147,8 +157,9 @@ export function extractCheckoutData(event: unknown): {
 
 /**
  * Check if event is a checkout completion event
+ * We ONLY listen to order.paid since it's the final source of truth for payments
  */
 export function isCheckoutCompleted(event: unknown): boolean {
     const e = event as { type: string }
-    return e.type === 'checkout.completed' || e.type === 'checkout_session.completed'
+    return e.type === 'order.paid'
 }

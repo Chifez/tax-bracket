@@ -15,7 +15,7 @@ export function useCreditCheckout() {
 
     const checkoutMutation = useMutation({
         mutationFn: async (options?: { successUrl?: string; cancelUrl?: string }): Promise<CheckoutResult> => {
-            return createCreditCheckout(options || {})
+            return createCreditCheckout({ data: options || {} })
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['credits'] })

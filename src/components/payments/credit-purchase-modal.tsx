@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useCreditCheckout, useCreditPricing } from '@/hooks/use-payments'
-import { Zap, Loader2, ArrowRight, Sparkles, ExternalLink } from 'lucide-react'
+import { Zap, Loader2, Sparkles, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface CreditPurchaseModalProps {
@@ -14,7 +14,7 @@ export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalP
 
     const handlePurchase = async () => {
         try {
-            const result = await createCheckoutAsync()
+            const result = await createCheckoutAsync({})
             if (result.checkoutUrl) {
                 window.location.href = result.checkoutUrl
             }
@@ -62,7 +62,7 @@ export function CreditPurchaseModal({ open, onOpenChange }: CreditPurchaseModalP
                     <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                         <h4 className="font-medium text-sm mb-1">Pay What You Want</h4>
                         <p className="text-xs text-muted-foreground">
-                            You'll choose how much to pay on the checkout page. 
+                            You'll choose how much to pay on the checkout page.
                             Minimum purchase is $1. Credits never expire.
                         </p>
                     </div>

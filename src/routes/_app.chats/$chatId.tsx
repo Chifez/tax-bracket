@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { getChat } from '@/server/functions/chat'
 import { ChatContainer } from '@/components/chat'
 
-export const Route = createFileRoute('/chats/$chatId')({
+export const Route = createFileRoute('/_app/chats/$chatId')({
     component: ChatRoute,
     loader: async ({ params }) => {
         const { chat } = await getChat({ data: { chatId: params.chatId } })

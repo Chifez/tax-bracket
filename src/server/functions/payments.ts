@@ -20,6 +20,13 @@ export const createCreditCheckout = createServerFn({ method: 'POST' })
 
         const siteUrl = process.env.SITE_URL || 'http://localhost:3000'
 
+        console.log('--- POLAR ENV DEBUG ---')
+        console.log('POLAR_ACCESS_TOKEN:', process.env.POLAR_ACCESS_TOKEN?.substring(0, 15) + '...')
+        console.log('POLAR_WEBHOOK_SECRET:', process.env.POLAR_WEBHOOK_SECRET?.substring(0, 15) + '...')
+        console.log('POLAR_CREDITS_PRODUCT_ID:', process.env.POLAR_CREDITS_PRODUCT_ID)
+        console.log('POLAR_MODE:', process.env.POLAR_MODE)
+        console.log('-----------------------')
+
         const checkout = await createCheckoutSession({
             userId: user.id,
             successUrl: data.successUrl || `${siteUrl}/payments/success`,
@@ -45,8 +52,8 @@ export const getPurchaseHistory = createServerFn().handler(async () => {
 
     return purchases.map(p => ({
         id: p.id,
-        amountUsd: p.metadata?.amountCents 
-            ? (p.metadata.amountCents as number) / 100 
+        amountUsd: p.metadata && typeof p.metadata === 'object' && 'amountCents' in p.metadata
+            ? (p.metadata as any).amountCents / 100
             : 0,
         creditsPurchased: p.amount,
         status: 'completed' as const, // Ledger only has completed transactions
@@ -85,8 +92,8 @@ export const getPurchase = createServerFn()
 
         return {
             id: transaction.id,
-            amountUsd: transaction.metadata?.amountCents 
-                ? (transaction.metadata.amountCents as number) / 100 
+            amountUsd: transaction.metadata && typeof transaction.metadata === 'object' && 'amountCents' in transaction.metadata
+                ? (transaction.metadata as any).amountCents / 100
                 : 0,
             creditsPurchased: transaction.amount,
             status: 'completed' as const,

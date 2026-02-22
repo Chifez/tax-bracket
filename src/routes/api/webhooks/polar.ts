@@ -57,6 +57,8 @@ export const Route = createFileRoute('/api/webhooks/polar')({
  * Grants credits based on the actual amount paid
  */
 async function handleCheckoutCompleted(event: unknown) {
+    console.log('[PolarWebhook DEBUG] RAW EVENT DUMP:', JSON.stringify(event, null, 2));
+
     const checkoutData = extractCheckoutData(event)
 
     if (!checkoutData) {
