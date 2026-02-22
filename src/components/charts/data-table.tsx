@@ -87,7 +87,7 @@ export const DataTable = memo(function DataTable({
                                     className={cn(
                                         'px-3 py-2.5 text-left font-semibold whitespace-nowrap',
                                         'bg-card text-foreground border-b border-border/80',
-                                        fixedColumn && i === 0 && 'sticky left-0 z-40 bg-white',
+                                        fixedColumn && i === 0 && 'sticky left-0 z-40 bg-card',
                                     )}
 
                                 >

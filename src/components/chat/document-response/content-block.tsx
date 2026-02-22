@@ -13,7 +13,7 @@ interface ContentBlockProps {
 export const ContentBlock = memo(function ContentBlock({ content }: ContentBlockProps) {
     if (content.type === 'text') {
         return (
-            <p className="text-[13px] text-muted-foreground leading-relaxed">
+            <p className="text-[13px] text-muted-foreground leading-relaxed whitespace-pre-wrap">
                 {content.content as string}
             </p>
         )

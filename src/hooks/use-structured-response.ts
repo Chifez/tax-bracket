@@ -39,15 +39,13 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
             const isComplete = toolState === 'output-available' || toolState === 'input-available' || toolState === 'result' || toolState === 'call'
             const isStreaming = !isComplete
 
-            // Prefer 'input'/'args' when streaming, 'output'/'result' when complete
+            // The AI SDK tool executor might append 'output'/'result' at stream completion.
+            // However, our tool doesn't "execute" to return an output, it just emits blocks via args.
+            // So we ALWAYS prioritize pulling from `t.input` or `t.args`.
             let data: any = {}
             let rawInput: string | null = null
 
-            if (t.output && Object.keys(t.output).length > 0) {
-                data = t.output
-            } else if (t.result && Object.keys(t.result).length > 0) {
-                data = t.result
-            } else if (t.input) {
+            if (t.input) {
                 // During streaming, input might be a partial JSON string
                 if (typeof t.input === 'string') {
                     rawInput = t.input
@@ -60,6 +58,11 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
                 } else {
                     data = t.args
                 }
+            } else if (t.output && Object.keys(t.output).length > 0) {
+                // Only fall back to output if args are fully missing 
+                data = t.output
+            } else if (t.result && Object.keys(t.result).length > 0) {
+                data = t.result
             }
 
             // Use partial JSON parser for streaming
@@ -80,7 +83,13 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
                 // Complete or already parsed data
                 blocks = (data.blocks || []) as UIBlock[]
                 sources = (data.sources || []) as Source[]
-                previousBlocksRef.current = blocks
+
+                // CRITICAL FIX: To prevent blocks flashing empty if `data.blocks` resolves randomly as [] at stream end
+                if (blocks.length === 0 && previousBlocksRef.current.length > 0) {
+                    blocks = previousBlocksRef.current
+                } else {
+                    previousBlocksRef.current = blocks
+                }
             }
 
             return { blocks, sources, isStreaming, partialBlock }
