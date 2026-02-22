@@ -82,6 +82,7 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
         }),
         onFinish: async () => {
             await queryClient.invalidateQueries({ queryKey: ['chats'] })
+            await queryClient.invalidateQueries({ queryKey: ['credits'] })
             if (chatId) {
                 await queryClient.refetchQueries({ queryKey: ['chat', chatId] })
             }

@@ -19,7 +19,7 @@ export function CreditDisplay({ isCollapsed = false, className }: CreditDisplayP
     }
 
     const percentageRemaining = 100 - credits.percentageUsed
-    const isLow = percentageRemaining <= 20
+    const isLow = percentageRemaining <= 50
     const isCritical = percentageRemaining <= 5
     const showBuyButton = credits.purchaseEnabled && (isLow || isCritical)
 
@@ -70,8 +70,8 @@ export function CreditDisplay({ isCollapsed = false, className }: CreditDisplayP
                 </div>
             )}
             <div className="text-muted-foreground">
-                {credits.weeklyResetEnabled 
-                    ? `Resets in ${formatResetTime()} (Monday 00:00 UTC)` 
+                {credits.weeklyResetEnabled
+                    ? `Resets in ${formatResetTime()} (Monday 00:00 UTC)`
                     : 'Purchased credits never expire'}
             </div>
             {credits.purchaseEnabled && (
