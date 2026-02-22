@@ -7,7 +7,7 @@ import { parsePartialJSON, mergeBlocks } from '@/lib/partial-json-parser'
 interface ExtendedMessage extends Partial<Message> {
     toolInvocations?: UIToolInvocation<any>[]
     content?: string
-    parts?: Array<{ type: string; text?: string }>
+    parts?: Array<any>
     metadata?: any
     sections?: any[]
     charts?: any[]
@@ -19,18 +19,24 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
     const previousBlocksRef = useRef<UIBlock[]>([])
 
     return useMemo(() => {
-        const toolInvocations = message.toolInvocations || []
-        const blockTool = toolInvocations.find(
-            t => (t as any).toolName === 'generate_ui_blocks' || (t as any).title === 'generate_ui_blocks'
+        const parts = message.parts || []
+        let blockTool = parts.find(
+            (p: any) => p.type === 'tool-generate_ui_blocks' || p.toolName === 'generate_ui_blocks' || p.title === 'generate_ui_blocks'
         )
+
+        if (!blockTool) {
+            const toolInvocations = message.toolInvocations || []
+            blockTool = toolInvocations.find(
+                (t: any) => t.toolName === 'generate_ui_blocks' || t.title === 'generate_ui_blocks'
+            )
+        }
 
         if (blockTool) {
             const t = blockTool as any
 
-            // AI SDK v6 states: 'partial-call', 'call', 'result'
-            // AI SDK v5 states: 'input-streaming', 'input-available', 'output-available'
+            // AI SDK states can vary between versions (partial-call, result, input-streaming, output-available)
             const toolState = t.state || ''
-            const isComplete = toolState === 'result' || toolState === 'call'
+            const isComplete = toolState === 'output-available' || toolState === 'input-available' || toolState === 'result' || toolState === 'call'
             const isStreaming = !isComplete
 
             // Prefer 'input'/'args' when streaming, 'output'/'result' when complete
