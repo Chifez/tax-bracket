@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
+    "start": "npm run db:setup && node .output/server/index.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "db:setup": "npx tsx scripts/setup-db.ts",
