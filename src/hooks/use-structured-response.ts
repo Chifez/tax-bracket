@@ -2,8 +2,22 @@ import type { Message } from '@/types'
 import type { UIToolInvocation } from 'ai'
 import type { StructuredResponse, UIBlock, Source } from '@/components/chat/blocks/types'
 import { useMemo, useRef } from 'react'
-import { parsePartialJSON, mergeBlocks } from '@/lib/partial-json-parser'
+import { parse } from 'partial-json'
 
+function mergeBlocks(existing: UIBlock[], incoming: UIBlock[]): UIBlock[] {
+    if (!existing || existing.length === 0) return incoming || []
+    if (!incoming) return existing
+
+    if (incoming.length === existing.length) {
+        return incoming.map((block, i) => ({ ...existing[i], ...block }))
+    }
+    if (incoming.length > existing.length) {
+        const updated = existing.map((block, i) => ({ ...block, ...incoming[i] }))
+        const newBlocks = incoming.slice(existing.length)
+        return [...updated, ...newBlocks]
+    }
+    return incoming
+}
 interface ExtendedMessage extends Partial<Message> {
     toolInvocations?: UIToolInvocation<any>[]
     content?: string
@@ -15,7 +29,7 @@ interface ExtendedMessage extends Partial<Message> {
     sources?: any[]
 }
 
-export function useStructuredResponse(message: ExtendedMessage): StructuredResponse & { partialBlock?: Partial<UIBlock> } {
+export function useStructuredResponse(message: ExtendedMessage): StructuredResponse {
     const previousBlocksRef = useRef<UIBlock[]>([])
 
     return useMemo(() => {
@@ -68,13 +82,18 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
             // Use partial JSON parser for streaming
             let blocks: UIBlock[] = []
             let sources: Source[] = []
-            let partialBlock: Partial<UIBlock> | undefined
 
             if (rawInput && isStreaming) {
                 // Parse partial JSON to extract blocks incrementally
-                const parseResult = parsePartialJSON(rawInput)
-                blocks = parseResult.blocks as UIBlock[]
-                partialBlock = parseResult.partialBlock as Partial<UIBlock> | undefined
+                try {
+                    const parsed = parse(rawInput) as any;
+                    let parsedBlocks = (parsed?.blocks || []) as UIBlock[];
+                    if (!Array.isArray(parsedBlocks)) parsedBlocks = [];
+
+                    blocks = parsedBlocks;
+                } catch (e) {
+                    blocks = previousBlocksRef.current;
+                }
 
                 // Merge with previous blocks to prevent flicker
                 blocks = mergeBlocks(previousBlocksRef.current, blocks) as UIBlock[]
@@ -92,7 +111,7 @@ export function useStructuredResponse(message: ExtendedMessage): StructuredRespo
                 }
             }
 
-            return { blocks, sources, isStreaming, partialBlock }
+            return { blocks, sources, isStreaming }
         }
 
         let metadata = message.metadata as any

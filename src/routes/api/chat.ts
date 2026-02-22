@@ -92,12 +92,23 @@ export const Route = createFileRoute('/api/chat')({
                 const currentFileIds = fileIds || []
 
                 if (lastMessage && lastMessage.role === 'user' && lastContent) {
-                    await db.insert(messages).values({
-                        chatId,
-                        role: 'user',
-                        content: lastContent,
-                        fileIds: currentFileIds,
+                    // Check if message exists to prevent saving duplicate when resending
+                    const existingMessage = await db.query.messages.findFirst({
+                        where: and(
+                            eq(messages.chatId, chatId),
+                            eq(messages.id, lastMessage.id)
+                        )
                     })
+
+                    if (!existingMessage) {
+                        await db.insert(messages).values({
+                            id: lastMessage.id, // Keep the same ID we have locally
+                            chatId,
+                            role: 'user',
+                            content: lastContent,
+                            fileIds: currentFileIds,
+                        })
+                    }
                 }
 
                 const currentYear = new Date().getFullYear()

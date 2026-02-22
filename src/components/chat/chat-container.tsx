@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { useChatStore } from '@/stores/chat-store'
-import { useChatSession, useChatData } from '@/hooks/use-chat'
+import { useChatSession, useChatData, useEditMessage } from '@/hooks/use-chat'
 import { ScrollArea } from '@/components/ui'
 import { ChatInput } from './chat-input'
 import { DocumentResponse } from './document-response'
@@ -26,8 +26,11 @@ export function ChatContainer({ className, chatId, initialMessages = [] }: ChatC
         isLoading,
         status,
         stop,
-        setMessages
+        setMessages,
+        regenerate
     } = useChatSession(chatId, initialMessages)
+
+    const { mutateAsync: editMessage } = useEditMessage()
 
     const bottomRef = useRef<HTMLDivElement>(null)
     const lastSyncedMessageCountRef = useRef(0)
@@ -61,7 +64,7 @@ export function ChatContainer({ className, chatId, initialMessages = [] }: ChatC
     useEffect(() => {
         if (messages.length > 0 || isLoading) {
             setTimeout(() => {
-                bottomRef.current?.scrollIntoView({ behavior: 'smooth' , block: 'end',})
+                bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end', })
             }, 100)
         }
     }, [messages, isLoading])
@@ -79,6 +82,33 @@ export function ChatContainer({ className, chatId, initialMessages = [] }: ChatC
         }
     }
 
+    const handleEditMessage = async (messageId: string, newContent: string) => {
+        if (!chatId) return
+
+        // Update backend
+        await editMessage({ chatId, messageId, newContent })
+
+        // Truncate locally
+        const targetIndex = messages.findIndex((m: any) => m.id === messageId)
+        if (targetIndex === -1) return
+
+        const truncated = [...messages.slice(0, targetIndex + 1)]
+        const targetMessage = truncated[targetIndex]
+
+        truncated[targetIndex] = {
+            ...targetMessage,
+            content: newContent,
+            parts: [{ type: 'text', text: newContent }]
+        } as UIMessage
+
+        setMessages(truncated)
+
+        // Resend
+        setTimeout(() => {
+            regenerate()
+        }, 100)
+    }
+
     return (
         <div className={cn('flex flex-col h-full bg-background', className)}>
             <ScrollArea className="flex-1 px-4 py-4 max-sm:pt-14">
@@ -89,10 +119,15 @@ export function ChatContainer({ className, chatId, initialMessages = [] }: ChatC
                         <>
                             {messages.map((message: any) =>
                                 message.role === 'user' ? (
-                                    <MessageBubble key={message.id} message={message} />
+                                    <MessageBubble
+                                        key={message.id}
+                                        message={message}
+                                        onEdit={(newContent) => handleEditMessage(message.id, newContent)}
+                                        isProcessing={isLoading}
+                                    />
                                 ) : (
-                                    <DocumentResponse 
-                                        key={message.id} 
+                                    <DocumentResponse
+                                        key={message.id}
                                         message={message}
                                         isStreaming={status === 'streaming' && message.id === messages[messages.length - 1]?.id}
                                     />
@@ -103,8 +138,8 @@ export function ChatContainer({ className, chatId, initialMessages = [] }: ChatC
                                 messages.length === 0 ||
                                 messages[messages.length - 1]?.role === 'user'
                             ) && (
-                                <ThinkingAnimation />
-                            )}
+                                    <ThinkingAnimation />
+                                )}
 
                             <div ref={bottomRef} className="min-h-20" />
                         </>

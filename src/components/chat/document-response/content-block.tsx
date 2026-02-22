@@ -14,13 +14,13 @@ export const ContentBlock = memo(function ContentBlock({ content }: ContentBlock
     if (content.type === 'text') {
         return (
             <p className="text-[13px] text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                {content.content as string}
+                {content.content as string || ''}
             </p>
         )
     }
 
     if (content.type === 'list') {
-        const items = content.content as string[]
+        const items = (content.content as string[]) || []
         return (
             <ul className="space-y-1.5">
                 {items.map((item, idx) => (
@@ -34,7 +34,7 @@ export const ContentBlock = memo(function ContentBlock({ content }: ContentBlock
     }
 
     if (content.type === 'key-value') {
-        const data = content.content as Record<string, string>
+        const data = (content.content as Record<string, string>) || {}
         return (
             <div className="space-y-1.5">
                 {Object.entries(data).map(([key, value]) => (
