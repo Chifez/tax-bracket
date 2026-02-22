@@ -115,37 +115,27 @@ export function extractCheckoutData(event: unknown): {
     const e = event as {
         type: string
         data: {
-            checkoutId?: string
-            amount?: number
-            metadata?: Record<string, string>
-            customer?: {
-                email?: string
+            checkoutId: string
+            metadata: {
+                userId: string
             }
-            items?: Array<{
-                amount?: number
+            customer: {
+                email: string
+            }
+            items: Array<{
+                amount: number
             }>
         }
     }
 
-    if (!e.data) {
+    if (!e.data || !e.data.checkoutId || !e.data.items || e.data.items.length === 0) {
         return null
     }
 
     const checkoutId = e.data.checkoutId
-    const amountCents = e.data.amount ?? e.data.items?.[0]?.amount ?? 0
-    const userId = e.data.metadata?.userId ?? null
-    const customerEmail = e.data.customer?.email ?? null
-
-    if (!checkoutId) {
-        return null
-    }
-
-    console.log('[DEBUG] Extracted Polar Checkout Data:', {
-        checkoutId,
-        amountCents,
-        userId,
-        customerEmail
-    });
+    const amountCents = e.data.items[0].amount
+    const userId = e.data.metadata.userId
+    const customerEmail = e.data.customer?.email || null
 
     return {
         checkoutId,
