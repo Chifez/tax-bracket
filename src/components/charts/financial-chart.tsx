@@ -61,7 +61,7 @@ export const FinancialChart = memo(function FinancialChart({ chart, className }:
             </div>
 
             <div className="h-56 p-4">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" debounce={50}>
                     {chartType === 'bar' ? (
                         <BarChart data={chart.data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />

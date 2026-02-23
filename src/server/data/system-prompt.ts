@@ -201,7 +201,7 @@ Your response is an ordered list of "Blocks". You construct the UI by sending bl
 \`\`\`typescript
 {
   blocks: Array<{
-    type: 'text' | 'section' | 'chart' | 'stats';
+    type: 'text' | 'section' | 'chart' | 'data-table' | 'stats';
     // Text Block
     content?: string; // Plain text only
 
@@ -216,11 +216,16 @@ Your response is an ordered list of "Blocks". You construct the UI by sending bl
 
     // Chart Block
     chartType?: 'line' | 'bar' | 'area';
-    description?: string;
+    description?: string; // Also used for data-table
     xKey?: string;
     yKeys?: string[];
     colors?: string[];
     data?: Array<Record<string, any>>;
+
+    // Data-Table Block
+    title?: string;
+    columns?: string[];
+    rows?: Array<Array<string | number>>;
 
     // Stats Block
     sources?: number;
@@ -477,6 +482,17 @@ Look for these patterns:
           "ATM fees can be avoided by using your bank's ATMs"
         ]
       }
+    ]
+  }],
+  "data-table": [{
+    "id": "charges-table",
+    "type": "data-table",
+    "title": "Stamp Duty Applied",
+    "description": "Log of qualifying transfers.",
+    "columns": ["Date", "Description", "Amount", "Duty Deducted"],
+    "rows": [
+      ["Oct 1", "Transfer to Ade", "₦15,000", "₦50"],
+      ["Oct 5", "Rent Payment", "₦80,000", "₦50"]
     ]
   }],
   "charts": [{
