@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { Message } from '@/types'
 import { useStructuredResponse } from '@/hooks/use-structured-response'
 import { BlockRenderer } from './blocks/block-renderer'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
 import type { UIToolInvocation } from 'ai'
 
 interface ExtendedMessage extends Partial<Message> {
@@ -111,13 +112,14 @@ export function DocumentResponse({ message, className, isStreaming: parentIsStre
                 {isExpanded && (blockCount > 0) && (
                     <div className="space-y-4">
                         {blocks.map((block, index) => (
-                            <BlockRenderer
-                                key={`${block.type}-${index}`}
-                                block={block}
-                                index={index}
-                                sources={sources}
-                                isStreaming={isStreaming && index === blocks.length - 1}
-                            />
+                            <ErrorBoundary key={`${block.type}-${index}`} fallbackText={`Failed to load ${block.type} block`}>
+                                <BlockRenderer
+                                    block={block}
+                                    index={index}
+                                    sources={sources}
+                                    isStreaming={isStreaming && index === blocks.length - 1}
+                                />
+                            </ErrorBoundary>
                         ))}
                     </div>
                 )}

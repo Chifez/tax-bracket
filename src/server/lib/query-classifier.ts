@@ -54,7 +54,8 @@ export function classifyQuery(
     const calcKeywords = [
         'calculate', 'compute', 'estimate', 'tax', 'liability',
         'deduction', 'relief', 'breakdown', 'chart', 'graph',
-        'trend', 'compare', 'analysis', 'forecast'
+        'trend', 'compare', 'analysis', 'forecast', 'table',
+        'data', 'overview', 'summary'
     ]
 
     const numberPattern = /\d+(?:,\d{3})*(?:\.\d+)?|[0-9]+k|[0-9]+m/i
