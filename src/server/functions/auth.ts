@@ -8,6 +8,7 @@ import { createSession, revokeSession, useAppSession } from '@/server/lib/sessio
 import { getAuthenticatedUser } from '@/server/middleware/auth'
 import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@/server/validators/auth'
 import { badRequest, unauthorized } from '@/server/lib/error'
+import { queueAuthEmail } from '@/server/functions/email-queue'
 
 /**
  * Get current user
@@ -53,6 +54,9 @@ export const register = createServerFn({ method: "POST" })
         // Set session cookie
         const appSession = await useAppSession()
         await appSession.update({ token: session.token })
+
+        // Queue welcome email (fire and forget)
+        queueAuthEmail({ to: newUser.email, name: newUser.name, type: 'welcome' }).catch(() => { })
 
         return { user: newUser }
     })
@@ -128,10 +132,16 @@ export const forgotPassword = createServerFn({ method: "POST" })
             expiresAt,
         })
 
-        // TODO: Send email
-        if (process.env.NODE_ENV === 'development') {
-            console.log(`[DEV] Password reset link: http://localhost:3000/auth/reset-password?token=${token}`)
-        }
+        const appUrl = process.env.APP_URL || 'http://localhost:3000'
+        const resetLink = `${appUrl}/auth/reset-password?token=${token}`
+
+        // Queue password reset email
+        queueAuthEmail({
+            to: user.email,
+            name: user.name,
+            type: 'password-reset',
+            resetLink,
+        }).catch(() => { })
 
         return { success: true }
     })
@@ -164,6 +174,12 @@ export const resetPassword = createServerFn({ method: "POST" })
         // Revoke all existing sessions for security
         const { revokeAllUserSessions } = await import('@/server/lib/session')
         await revokeAllUserSessions(resetToken.userId)
+
+        // Queue password changed confirmation email
+        const changedUser = await db.query.users.findFirst({ where: eq(users.id, resetToken.userId) })
+        if (changedUser) {
+            queueAuthEmail({ to: changedUser.email, name: changedUser.name, type: 'password-changed' }).catch(() => { })
+        }
 
         return { success: true }
     })

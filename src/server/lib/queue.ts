@@ -1,12 +1,13 @@
 import PgBoss from 'pg-boss'
 
-const databaseUrl = process.env.DATABASE_URL!
-
 // Singleton instance
 let boss: PgBoss | null = null
 
 export const getQueue = async () => {
     if (boss) return boss
+
+    const databaseUrl = process.env.DATABASE_URL
+    if (!databaseUrl) throw new Error('DATABASE_URL is not set')
 
     boss = new PgBoss(databaseUrl)
 
@@ -22,4 +23,7 @@ export const QUEUE_NAMES = {
     COMPUTE_AGGREGATES: 'compute-aggregates',
     BUILD_CONTEXT: 'build-context',
     RESET_CREDITS: 'reset-credits',
+    SEND_AUTH_EMAIL: 'send-auth-email',
+    SEND_SUPPORT_EMAIL: 'send-support-email',
+    SEND_PRODUCT_UPDATE_EMAIL: 'send-product-update-email',
 }

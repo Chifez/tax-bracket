@@ -9,17 +9,18 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { User, HelpCircle } from 'lucide-react'
+import { User, HelpCircle, MessageSquarePlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ProfileDropdownProps {
     user: any
     isCollapsed?: boolean
     side?: 'right' | 'top' | 'bottom' | 'left'
-    onSettingsClick?: () => void
+    onSupportClick?: () => void
+    onFeedbackClick?: () => void
 }
 
-export function ProfileDropdown({ user, isCollapsed, side = 'right' }: ProfileDropdownProps) {
+export function ProfileDropdown({ user, isCollapsed, side = 'right', onSupportClick, onFeedbackClick }: ProfileDropdownProps) {
     const TriggerButton = (
         <Button
             variant="ghost"
@@ -70,9 +71,13 @@ export function ProfileDropdown({ user, isCollapsed, side = 'right' }: ProfileDr
                         <User size={16} strokeWidth={1.75} className="mr-2 h-4 w-4" />
                         <span>Profile</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem >
+                    <DropdownMenuItem onClick={onSupportClick}>
                         <HelpCircle size={16} strokeWidth={1.75} className="mr-2 h-4 w-4" />
                         <span>Help & Support</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onFeedbackClick}>
+                        <MessageSquarePlus size={16} strokeWidth={1.75} className="mr-2 h-4 w-4" />
+                        <span>Feedback</span>
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
             </DropdownMenuContent>

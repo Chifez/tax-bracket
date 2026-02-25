@@ -8,6 +8,8 @@ import { resetAllUsersCredits } from '@/server/lib/credits'
 export async function registerCreditResetJob() {
     const boss = await getQueue()
 
+    await boss.createQueue(QUEUE_NAMES.RESET_CREDITS)
+
     // Schedule job to run every Monday at 00:00 UTC
     // Cron format: minute hour day-of-month month day-of-week
     // 0 0 * * 1 = 00:00 every Monday
@@ -21,12 +23,12 @@ export async function registerCreditResetJob() {
 
         try {
             const result = await resetAllUsersCredits()
-            
+
             if (result.skipped) {
                 console.log('[CreditResetJob] Credit reset skipped (not in beta mode or purchases enabled)')
                 return { success: true, skipped: true, usersReset: 0 }
             }
-            
+
             console.log(`[CreditResetJob] Successfully reset credits for ${result.count} users`)
             return { success: true, skipped: false, usersReset: result.count }
         } catch (error) {

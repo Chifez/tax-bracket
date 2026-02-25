@@ -17,13 +17,12 @@ export interface FeatureFlags {
  */
 export function getFeatureFlags(): FeatureFlags {
     const betaMode = process.env.BETA_MODE !== 'false'
-    const creditPurchaseEnabled = process.env.CREDIT_PURCHASE_ENABLED === 'true'
 
     return {
         betaMode,
-        creditPurchaseEnabled,
+        creditPurchaseEnabled: !betaMode,
         // Weekly credits reset only in beta mode
-        weeklyCreditsReset: betaMode && !creditPurchaseEnabled,
+        weeklyCreditsReset: betaMode,
         ragEnabled: process.env.RAG_ENABLED === 'true',
         templateResponsesEnabled: process.env.TEMPLATE_RESPONSES_ENABLED === 'true',
         responseCacheEnabled: process.env.RESPONSE_CACHE_ENABLED === 'true',

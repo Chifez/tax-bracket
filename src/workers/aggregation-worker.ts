@@ -11,6 +11,7 @@ export async function startAggregationWorker() {
 
     console.log(`Starting worker for ${QUEUE_NAMES.COMPUTE_AGGREGATES}...`)
 
+    await queue.createQueue(QUEUE_NAMES.COMPUTE_AGGREGATES)
     // Aggregation worker
     await queue.work(QUEUE_NAMES.COMPUTE_AGGREGATES, async (job: any) => {
         const { userId, taxYear } = job.data
@@ -32,6 +33,7 @@ export async function startAggregationWorker() {
 
     console.log(`Starting worker for ${QUEUE_NAMES.BUILD_CONTEXT}...`)
 
+    await queue.createQueue(QUEUE_NAMES.BUILD_CONTEXT)
     // Context builder worker
     await queue.work(QUEUE_NAMES.BUILD_CONTEXT, async (job: any) => {
         const { userId, taxYear } = job.data

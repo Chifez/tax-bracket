@@ -4,6 +4,7 @@ import { db } from '@/db'
 import { users } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { createSession, useAppSession } from '@/server/lib/session'
+import { queueAuthEmail } from '@/server/functions/email-queue'
 
 const googleAuthSchema = z.object({
     code: z.string(),
@@ -82,10 +83,13 @@ export const handleGoogleCallback = createServerFn()
                 email: profile.email,
                 name: profile.name,
                 googleId: profile.id,
-                image: profile.picture, // Save avatar
+                image: profile.picture,
                 emailVerified: true,
             }).returning()
             user = newUser
+
+            // Queue welcome email for brand-new Google users
+            queueAuthEmail({ to: newUser.email, name: newUser.name, type: 'welcome' }).catch(() => { })
         } else {
             // Link existing user and update avatar if missing or changed
             const shouldUpdate = !user.googleId || user.image !== profile.picture

@@ -24,14 +24,15 @@ export const users = pgTable('users', {
     image: varchar('image', { length: 255 }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
-    
+
+    // User preferences
+    allowAnalytics: boolean('allow_analytics').notNull().default(true),
+    allowProductUpdates: boolean('allow_product_updates').notNull().default(true),
+
     // Credit system configuration
-    // The actual balance is calculated from the credit_transactions ledger
     creditsLimit: integer('credits_limit').notNull().default(1000),
-    
-    // Legacy fields - kept for migration compatibility but no longer used
-    // Balance is now calculated from credit_transactions table
-    // TODO: Remove these columns in a future migration after confirming ledger is working
+
+    // Legacy fields - kept for migration compatibility
     creditsUsed: integer('credits_used').notNull().default(0),
     weekStartDate: timestamp('week_start_date').notNull().$defaultFn(() => getCurrentWeekStart()),
     lastResetDate: timestamp('last_reset_date'),

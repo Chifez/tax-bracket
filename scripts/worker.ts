@@ -1,6 +1,7 @@
 import { startFileProcessor } from '@/workers/file-processor'
 import { startAggregationWorker } from '@/workers/aggregation-worker'
 import { registerCreditResetJob } from '@/server/jobs/reset-credits'
+import { registerEmailJobs } from '@/server/jobs/email'
 import { getQueue } from '@/server/lib/queue'
 import dotenv from 'dotenv'
 
@@ -22,6 +23,7 @@ async function main() {
 
     // Register scheduled jobs
     await registerCreditResetJob()
+    await registerEmailJobs()
 
     console.log('Worker process running. Press Ctrl+C to stop.')
 

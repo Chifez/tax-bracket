@@ -92,17 +92,22 @@ export const Route = createFileRoute('/api/chat')({
                 const currentFileIds = fileIds || []
 
                 if (lastMessage && lastMessage.role === 'user' && lastContent) {
-                    // Check if message exists to prevent saving duplicate when resending
-                    const existingMessage = await db.query.messages.findFirst({
-                        where: and(
-                            eq(messages.chatId, chatId),
-                            eq(messages.id, lastMessage.id)
-                        )
-                    })
+                    // AI SDK generates nanoid-style IDs; only use them if they're valid UUIDs
+                    const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lastMessage.id)
+
+                    let existingMessage = null
+                    if (isValidUuid) {
+                        existingMessage = await db.query.messages.findFirst({
+                            where: and(
+                                eq(messages.chatId, chatId),
+                                eq(messages.id, lastMessage.id)
+                            )
+                        })
+                    }
 
                     if (!existingMessage) {
                         await db.insert(messages).values({
-                            id: lastMessage.id, // Keep the same ID we have locally
+                            ...(isValidUuid ? { id: lastMessage.id } : {}),
                             chatId,
                             role: 'user',
                             content: lastContent,

@@ -14,6 +14,7 @@ export async function startFileProcessor() {
 
     console.log(`Starting worker for ${QUEUE_NAMES.PARSE_FILE}...`)
 
+    await queue.createQueue(QUEUE_NAMES.PARSE_FILE)
     await queue.work(QUEUE_NAMES.PARSE_FILE, async (job: any) => {
         const { fileId, key, bucket, mimeType, userId, taxYear, batchId, bankName } = job.data
 
