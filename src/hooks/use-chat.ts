@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import type { UIMessage } from 'ai'
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import { generateId } from '@/lib/utils'
 
 // Check if error is a 429 insufficient credits response
@@ -42,6 +42,8 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
     })
     const hasSentPendingMessage = useRef(false)
     const previousChatIdRef = useRef<string | null>(null)
+
+    const pendingFileIdsRef = useRef<string[]>([])
 
     if (previousChatIdRef.current !== chatId) {
         previousChatIdRef.current = chatId
@@ -108,11 +110,11 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
 
     if (pendingMessageRef.current.data && !hasSentPendingMessage.current && status === 'ready') {
         hasSentPendingMessage.current = true
-        const { chatId: _, ...messageOptions } = pendingMessageRef.current.data
+        const { chatId: _, fileIds: pendingFileIds, ...messageOptions } = pendingMessageRef.current.data
 
         queueMicrotask(() => {
             setThinking(true)
-            originalSendMessage(messageOptions)
+            originalSendMessage(messageOptions, pendingFileIds?.length > 0 ? { body: { fileIds: pendingFileIds } } : undefined)
         })
     }
 
@@ -122,15 +124,35 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
         })
     }
 
+    // When the SDK adds its own optimistic user message (existing chat path),
+    // patch it immediately with any pending fileIds so the file chip renders right away.
+    useEffect(() => {
+        if (pendingFileIdsRef.current.length === 0) return
+        const lastUserMsg = messages[messages.length - 1]
+        if (lastUserMsg?.role === 'user' && !(lastUserMsg as any).fileIds?.length) {
+            const ids = pendingFileIdsRef.current
+            pendingFileIdsRef.current = []
+            setMessages(
+                messages.map((msg, idx) =>
+                    idx === messages.length - 1
+                        ? ({ ...msg, fileIds: ids } as UIMessage)
+                        : msg
+                )
+            )
+        }
+    }, [messages, setMessages])
+
     const sendMessage: typeof originalSendMessage = (options, requestOptions) => {
         if (!chatId) {
             const newChatId = generateId()
             const messageText = options && 'text' in options ? options.text : ''
+            const fileIds: string[] = (requestOptions?.body as any)?.fileIds ?? []
 
             const optimisticMessage = {
                 id: generateId(),
                 role: 'user' as const,
                 parts: [{ type: 'text' as const, text: messageText || '' }],
+                fileIds,
             }
 
             setMessages([optimisticMessage as UIMessage])
@@ -138,6 +160,7 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
             if (typeof window !== 'undefined') {
                 sessionStorage.setItem('pendingMessage', JSON.stringify({
                     chatId: newChatId,
+                    fileIds,
                     ...options
                 }))
             }
@@ -150,6 +173,12 @@ export const useChatSession = (chatId: string | null, initialMessages: UIMessage
             })
 
             return Promise.resolve()
+        }
+
+        // Existing chat: SDK will create its own optimistic message, patch it via useEffect
+        const fileIds: string[] = (requestOptions?.body as any)?.fileIds ?? []
+        if (fileIds.length > 0) {
+            pendingFileIdsRef.current = fileIds
         }
 
         setThinking(true)

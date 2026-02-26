@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { useChatStore } from '@/stores/chat-store'
 import { useChatSession, useChatData, useEditMessage } from '@/hooks/use-chat'
+import { useFileUpload } from '@/hooks/use-uploads'
 import { ScrollArea } from '@/components/ui'
 import { ChatInput } from './chat-input'
 import { DocumentResponse } from './document-response'
@@ -19,6 +20,7 @@ interface ChatContainerProps {
 export function ChatContainer({ className, chatId, initialMessages = [] }: ChatContainerProps) {
     const { isThinking } = useChatStore()
     const { data: chatData } = useChatData(chatId)
+    const { uploadFile } = useFileUpload()
 
     const {
         messages,
@@ -71,15 +73,12 @@ export function ChatContainer({ className, chatId, initialMessages = [] }: ChatC
 
     const hasMessages = messages.length > 0
 
-    const handleSendMessage = (text: string, files?: File[]) => {
-        if (files && files.length > 0) {
-            sendMessage({
-                text,
-                files: files as any
-            })
-        } else {
-            sendMessage({ text })
-        }
+    const handleSendMessage = async (text: string, fileIds?: string[]) => {
+        // fileIds are already uploaded — resolved before Send was clicked
+        sendMessage(
+            { text },
+            { body: { fileIds: fileIds ?? [] } }
+        )
     }
 
     const handleEditMessage = async (messageId: string, newContent: string) => {
@@ -152,10 +151,10 @@ export function ChatContainer({ className, chatId, initialMessages = [] }: ChatC
                     <ChatInput
                         onSend={handleSendMessage}
                         onStop={stop}
-
                         isThinking={isThinking}
                         status={status}
                         disabled={!chatId && messages.length > 0}
+                        uploadFile={(file) => uploadFile(file, { chatId: chatId ?? undefined }) as any}
                     />
                 </div>
             </div>

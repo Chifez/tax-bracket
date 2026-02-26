@@ -148,7 +148,87 @@ export const Route = createFileRoute('/api/chat')({
                     generateChatTitle(chatId, lastContent || legacyContent, currentFileIds)
                 }
 
-                const convertedMessages = await convertToModelMessages(incomingMessages)
+                // Sanitize messages before conversion — strip parts with missing 'type'
+                const sanitizedMessages = incomingMessages
+                    .map(msg => {
+                        if ('parts' in msg && Array.isArray(msg.parts)) {
+                            return {
+                                ...msg,
+                                parts: msg.parts.filter((part: any) => part && typeof part.type === 'string'),
+                            }
+                        }
+                        return msg
+                    })
+                    .filter(msg => {
+                        if ('parts' in msg && Array.isArray(msg.parts)) {
+                            return msg.parts.length > 0
+                        }
+                        return true
+                    })
+
+                const convertedMessages = await convertToModelMessages(sanitizedMessages as UIMessage[])
+
+                // Inject file content AFTER conversion.
+                // - For text-extractable files (CSV/PDF that have been processed): inject as a text part
+                // - For images: inject as a FilePart using the public URL
+                // We deliberately avoid the openaiFileId here because the AI SDK's ModelMessage schema
+                // requires data to be base64, Uint8Array, or a URL — not a raw OpenAI file ID string.
+                if (currentFileIds.length > 0) {
+                    try {
+                        const attachedFiles = await db.query.files.findMany({
+                            where: (f, { inArray }) => inArray(f.id, currentFileIds),
+                            columns: { id: true, url: true, extractedText: true, metadata: true, status: true },
+                        })
+
+                        const extraParts: any[] = []
+
+                        for (const f of attachedFiles) {
+                            const mimeType: string = (f.metadata as any)?.mimeType ?? ''
+                            const isImage = mimeType.startsWith('image/')
+
+                            if (isImage) {
+                                // Images: pass as a FilePart with a proper URL
+                                extraParts.push({
+                                    type: 'file' as const,
+                                    data: new URL(f.url),
+                                    mimeType,
+                                })
+                            } else if (f.extractedText) {
+                                // Processed text file (CSV / PDF): inject as inline text
+                                const name = (f.metadata as any)?.originalName ?? 'file'
+                                extraParts.push({
+                                    type: 'text' as const,
+                                    text: `--- Attached file: ${name} ---\n${f.extractedText}\n--- End of file ---`,
+                                })
+                            } else {
+                                // File is still processing — note in context so the model knows
+                                const name = (f.metadata as any)?.originalName ?? 'file'
+                                console.log(`[Chat] File ${f.id} (${name}) not yet processed, skipping injection`)
+                                extraParts.push({
+                                    type: 'text' as const,
+                                    text: `[Note: the file "${name}" was just uploaded and is still being processed. It will be available in future messages.]`,
+                                })
+                            }
+                        }
+
+                        if (extraParts.length > 0) {
+                            console.log(`[Chat] Injecting ${extraParts.length} file part(s) into last user message`)
+                            const lastIdx = convertedMessages.length - 1
+                            const lastConverted = convertedMessages[lastIdx]
+                            if (lastConverted && lastConverted.role === 'user') {
+                                const existingContent = Array.isArray(lastConverted.content)
+                                    ? lastConverted.content
+                                    : [{ type: 'text' as const, text: lastContent }]
+                                    ; (convertedMessages[lastIdx] as any).content = [
+                                        ...existingContent,
+                                        ...extraParts,
+                                    ]
+                            }
+                        }
+                    } catch (err) {
+                        console.error('[Chat] Failed to inject file content:', err)
+                    }
+                }
 
                 const lastMessageId = lastMessage?.id || crypto.randomUUID()
                 const requestId = `chat-${chatId}-msg-${lastMessageId}`

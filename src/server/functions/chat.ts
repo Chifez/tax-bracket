@@ -88,8 +88,9 @@ export const getChat = createServerFn()
                     id: msg.id,
                     role: msg.role as 'user' | 'assistant',
                     content: msg.content,
-                    timestamp: msg.createdAt.toISOString(), // Map createdAt to timestamp
+                    timestamp: msg.createdAt.toISOString(),
                     attachments: msg.attachments as any,
+                    fileIds: (msg.fileIds as string[]) || [],
                     sections: msg.sections as any,
                     charts: msg.charts as any,
                     stats: msg.stats as any,

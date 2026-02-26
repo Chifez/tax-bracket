@@ -14,6 +14,7 @@ export const files = pgTable('files', {
     url: text('url').notNull(),
     status: fileStatusEnum('status').default('pending').notNull(),
     extractedText: text('extracted_text'),
+    openaiFileId: text('openai_file_id'),
 
     // Tax context
     taxYear: integer('tax_year'),

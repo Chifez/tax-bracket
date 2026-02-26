@@ -3,7 +3,7 @@ import type { UIMessage } from 'ai'
 import { cn } from '@/lib/utils'
 import { FileAttachment } from './file-attachment'
 import { useState } from 'react'
-import { Pencil, X, Check } from 'lucide-react'
+import { Pencil, X, Check, FileText } from 'lucide-react'
 import { Button, Textarea } from '@/components/ui'
 
 interface MessageBubbleProps {
@@ -19,38 +19,29 @@ interface MessageBubbleProps {
 export function MessageBubble({ message, className, onEdit, isProcessing }: MessageBubbleProps) {
     const [isEditing, setIsEditing] = useState(false)
     const [editContent, setEditContent] = useState('')
+
     // Extract text content - handle both old Message format and new UIMessage format
     let textContent = ''
-
-    // Debug log to see message structure
-    console.log('MessageBubble received:', message)
-
     if ('content' in message && typeof message.content === 'string') {
-        // Old format: direct content property
         textContent = message.content
     } else if ('parts' in message && Array.isArray(message.parts)) {
-        // New format: parts array from AI SDK v6
         textContent = message.parts
             .filter(part => part.type === 'text')
             .map(part => part.text)
             .join('')
     } else if ('text' in message && typeof (message as any).text === 'string') {
-        // Alternative: text property directly on message
         textContent = (message as any).text
     }
 
-    console.log('Extracted text content:', textContent)
-
     const hasContent = textContent.trim().length > 0
 
-    // Handle attachments from both formats
-    const attachments = 'attachments' in message ? message.attachments : undefined
-    const hasFiles = attachments && attachments.length > 0
+    // File count — prefer fileIds array (from DB), fall back to legacy attachments
+    const fileIds: string[] = (message as any).fileIds ?? []
+    const legacyAttachments = ('attachments' in message ? message.attachments : undefined) ?? []
+    const fileCount = fileIds.length > 0 ? fileIds.length : legacyAttachments.length
+    const hasFiles = fileCount > 0
 
-    if (!hasContent && !hasFiles) {
-        console.warn('MessageBubble: No content or files to display')
-        return null
-    }
+    if (!hasContent && !hasFiles) return null
 
     const handleEditStart = () => {
         setEditContent(textContent)
@@ -72,10 +63,11 @@ export function MessageBubble({ message, className, onEdit, isProcessing }: Mess
     return (
         <div className={cn('flex justify-end group', className)}>
             <div className="max-w-[70%] space-y-2 w-full flex flex-col items-end">
-                {/* File attachments */}
-                {hasFiles && (
+
+                {/* Legacy full file attachments */}
+                {legacyAttachments.length > 0 && fileIds.length === 0 && (
                     <div className="flex flex-wrap gap-2 justify-end">
-                        {attachments!.map((attachment, idx) => (
+                        {legacyAttachments.map((attachment, idx) => (
                             <FileAttachment
                                 key={idx}
                                 name={attachment.name}
@@ -83,6 +75,21 @@ export function MessageBubble({ message, className, onEdit, isProcessing }: Mess
                                 size={attachment.size}
                             />
                         ))}
+                    </div>
+                )}
+
+                {/* Compact file chip — used for new messages with fileIds */}
+                {fileIds.length > 0 && (
+                    <div className="flex items-center gap-1.5 bg-neutral-700/60 rounded-lg px-2.5 py-1.5 text-xs text-neutral-300">
+                        <FileText size={13} className="shrink-0 text-neutral-400" />
+                        <span className="truncate max-w-[100px]">
+                            {fileCount === 1 ? 'Attachment' : 'Attachment'}
+                        </span>
+                        {fileCount > 1 && (
+                            <span className="bg-neutral-600 text-neutral-200 rounded-full px-1.5 py-0.5 text-[10px] font-medium">
+                                +{fileCount - 1}
+                            </span>
+                        )}
                     </div>
                 )}
 
@@ -138,7 +145,7 @@ export function MessageBubble({ message, className, onEdit, isProcessing }: Mess
                 {!hasContent && hasFiles && (
                     <div className="text-right">
                         <span className="text-[11px] text-muted-foreground">
-                            {attachments!.length} file{attachments!.length > 1 ? 's' : ''} attached
+                            {fileCount} file{fileCount > 1 ? 's' : ''} attached
                         </span>
                     </div>
                 )}
