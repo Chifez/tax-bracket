@@ -1,15 +1,16 @@
-import { useState, useRef, KeyboardEvent } from 'react'
+import { useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react'
 import { Button, Textarea } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { Send, Paperclip, X, FileText, Image, Square, Loader2, CheckCircle2 } from 'lucide-react'
 import { useUser } from '@/hooks/use-auth'
 import { toast } from 'sonner'
+import { deleteFile as deleteFileServer } from '@/server/functions/upload'
 
 interface AttachedFile {
-    localId: string         // temp local ID for tracking
+    localId: string
     name: string
-    status: 'uploading' | 'done' | 'error'
-    fileId: string | null   // DB UUID returned after upload
+    status: 'uploading' | 'done' | 'error' | 'deleting'
+    fileId: string | null
 }
 
 interface ChatInputProps {
@@ -21,6 +22,8 @@ interface ChatInputProps {
     status: 'submitted' | 'streaming' | 'ready' | 'error'
     uploadFile: (file: File) => Promise<{ file: { id: string } } | null>
 }
+
+const MAX_HEIGHT = 100
 
 export function ChatInput({
     disabled,
@@ -45,6 +48,19 @@ export function ChatInput({
     const canSend = (input.trim() || attachedFiles.some(f => f.status === 'done')) &&
         !isProcessing && !isAnyUploading && !disabled
 
+    // Auto-expand textarea
+    const adjustHeight = useCallback(() => {
+        const el = textareaRef.current
+        if (!el) return
+        el.style.height = 'auto'
+        el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT)}px`
+        el.style.overflowY = el.scrollHeight > MAX_HEIGHT ? 'auto' : 'hidden'
+    }, [])
+
+    useEffect(() => {
+        adjustHeight()
+    }, [input, adjustHeight])
+
     const handleSendClick = async () => {
         if (!user) {
             toast.error('You must be logged in to send messages')
@@ -59,6 +75,13 @@ export function ChatInput({
         onSend(input, readyFileIds.length > 0 ? readyFileIds : undefined)
         setInput('')
         setAttachedFiles([])
+
+        // Reset textarea height after send
+        requestAnimationFrame(() => {
+            if (textareaRef.current) {
+                textareaRef.current.style.height = 'auto'
+            }
+        })
     }
 
     const onEnter = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -73,10 +96,8 @@ export function ChatInput({
         if (files.length === 0) return
         setShowAttachMenu(false)
 
-        // Reset file input so the same file can be picked again
         e.target.value = ''
 
-        // Register each file immediately with 'uploading' status
         const newEntries: AttachedFile[] = files.map(file => ({
             localId: crypto.randomUUID(),
             name: file.name,
@@ -86,7 +107,6 @@ export function ChatInput({
 
         setAttachedFiles(prev => [...prev, ...newEntries])
 
-        // Upload each file in parallel
         await Promise.all(
             files.map(async (file, idx) => {
                 const localId = newEntries[idx].localId
@@ -113,7 +133,22 @@ export function ChatInput({
         )
     }
 
-    const removeFile = (localId: string) => {
+    const removeFile = async (localId: string) => {
+        const file = attachedFiles.find(f => f.localId === localId)
+        if (!file) return
+
+        // If the file was uploaded, delete it server-side
+        if (file.fileId && file.status === 'done') {
+            setAttachedFiles(prev =>
+                prev.map(f => f.localId === localId ? { ...f, status: 'deleting' } : f)
+            )
+            try {
+                await deleteFileServer({ data: { fileId: file.fileId } })
+            } catch (err) {
+                console.error('[ChatInput] Failed to delete file:', err)
+            }
+        }
+
         setAttachedFiles(prev => prev.filter(f => f.localId !== localId))
     }
 
@@ -136,10 +171,11 @@ export function ChatInput({
                                 'flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs',
                                 file.status === 'uploading' && 'bg-muted text-muted-foreground',
                                 file.status === 'done' && 'bg-muted text-foreground',
+                                file.status === 'deleting' && 'bg-muted text-muted-foreground opacity-50',
                                 file.status === 'error' && 'bg-destructive/10 text-destructive',
                             )}
                         >
-                            {file.status === 'uploading' ? (
+                            {file.status === 'uploading' || file.status === 'deleting' ? (
                                 <Loader2 size={12} className="animate-spin shrink-0" />
                             ) : file.status === 'done' ? (
                                 <CheckCircle2 size={12} className="text-green-500 shrink-0" />
@@ -147,10 +183,10 @@ export function ChatInput({
                                 <FileText size={12} className="shrink-0" />
                             )}
                             <span className="max-w-[120px] truncate">{file.name}</span>
-                            {file.status !== 'uploading' && (
+                            {file.status !== 'uploading' && file.status !== 'deleting' && (
                                 <button
                                     onClick={() => removeFile(file.localId)}
-                                    className="text-muted-foreground hover:text-foreground"
+                                    className="text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                     <X size={12} />
                                 </button>
@@ -211,14 +247,15 @@ export function ChatInput({
                     onKeyDown={onEnter}
                     placeholder={
                         isAnyUploading
-                            ? 'Uploading file...'
+                            ? 'Processing file...'
                             : disabled
                                 ? 'Start a new chat...'
                                 : 'Ask a question...'
                     }
                     disabled={disabled || isProcessing}
-                    className="flex-1 min-h-[36px] max-h-[160px] border-0 bg-transparent resize-none focus-visible:ring-0 focus-visible:ring-offset-0 py-2 text-base md:text-[13px]"
+                    className="flex-1 min-h-[36px] border-0 bg-transparent resize-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 py-2 text-base md:text-[13px] placeholder:text-muted-foreground disabled:opacity-50"
                     rows={1}
+                    style={{ overflowY: 'hidden' }}
                 />
 
                 {/* Send/Stop Button */}

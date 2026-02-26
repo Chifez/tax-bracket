@@ -1,24 +1,6 @@
 import { parse } from 'csv-parse/sync'
 import * as XLSX from 'xlsx'
 
-// Dynamic import for pdf-parse (CJS module)
-type PdfParseFunction = (buffer: Buffer) => Promise<{ text: string }>
-let pdfParseFn: PdfParseFunction | null = null
-
-async function getPdfParser(): Promise<PdfParseFunction> {
-    if (!pdfParseFn) {
-        // pdf-parse has a complex export structure - handle both ESM and CJS
-        const module = await import('pdf-parse')
-        // Access the function - it may be on .default or directly on the module
-        const fn = (module as any).default ?? (module as any)
-        if (typeof fn !== 'function') {
-            throw new Error('Failed to load pdf-parse module')
-        }
-        pdfParseFn = fn as PdfParseFunction
-    }
-    return pdfParseFn!
-}
-
 // -------------------------------------------------------------------
 // Types
 // -------------------------------------------------------------------
@@ -35,13 +17,14 @@ export interface ParsedFileResult {
 }
 
 // -------------------------------------------------------------------
-// PDF Parsing
+// PDF Parsing (pdf-parse v2 — class-based API)
 // -------------------------------------------------------------------
 
 export async function parsePdf(buffer: Buffer): Promise<ParsedFileResult> {
-    const pdf = await getPdfParser()
-    const data = await pdf(buffer)
-    const rawText = data.text as string
+    const { PDFParse } = await import('pdf-parse')
+    const parser = new PDFParse({ data: new Uint8Array(buffer) })
+    const result = await parser.getText()
+    const rawText = typeof result === 'string' ? result : result.text
 
     // Attempt to extract tabular data from PDF text lines
     const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean)

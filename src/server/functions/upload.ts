@@ -1,8 +1,8 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getAuthenticatedUser } from '@/server/middleware/auth'
 import { unauthorized } from '@/server/lib/error'
-import { getUploadUrlSchema, registerFileSchema } from '@/server/validators/upload'
-import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { getUploadUrlSchema, registerFileSchema, deleteFileSchema } from '@/server/validators/upload'
+import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { s3Client, CLOUDFLARE } from '@/server/lib/s3'
 import { db } from '@/db'
@@ -11,7 +11,8 @@ import { getQueue, QUEUE_NAMES } from '@/server/lib/queue'
 import { v4 as uuidv4 } from 'uuid'
 import OpenAI from 'openai'
 import { Readable } from 'stream'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
+import { parseFile } from '@/server/lib/parser'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -79,16 +80,28 @@ export const registerFile = createServerFn({ method: "POST" })
             }
         }).returning()
 
-        // 2. In parallel: upload to OpenAI Files API and queue the background job
-        const [openaiResult] = await Promise.allSettled([
+        // 2. In parallel: upload to OpenAI Files API and download + extract text
+        const [openaiResult, extractResult] = await Promise.allSettled([
             uploadToOpenAI(data.key, data.filename, data.contentType, newFile.id),
+            extractTextFromR2(data.key, data.contentType),
         ])
 
         if (openaiResult.status === 'rejected') {
             console.error(`[Upload] OpenAI Files API upload failed for ${newFile.id}:`, openaiResult.reason)
         }
 
-        // 3. Queue background processing (parse, normalize, aggregate)
+        // Store extracted text immediately so the file is chat-ready
+        const extractedText = extractResult.status === 'fulfilled' ? extractResult.value : null
+        if (extractedText) {
+            await db.update(files)
+                .set({ extractedText, status: 'processing' })
+                .where(eq(files.id, newFile.id))
+            console.log(`[Upload] Text extracted for ${newFile.id} (${extractedText.length} chars)`)
+        } else if (extractResult.status === 'rejected') {
+            console.error(`[Upload] Text extraction failed for ${newFile.id}:`, extractResult.reason)
+        }
+
+        // 3. Queue background processing (normalize, deduplicate, aggregate)
         const queue = await getQueue()
         await queue.send(QUEUE_NAMES.PARSE_FILE, {
             fileId: newFile.id,
@@ -101,7 +114,6 @@ export const registerFile = createServerFn({ method: "POST" })
             bankName: data.bankName || null,
         })
 
-        // Return the file with whatever openAI ID we got (may be null if it failed)
         const updatedFile = await db.query.files.findFirst({ where: eq(files.id, newFile.id) })
         return { file: updatedFile ?? newFile }
     })
@@ -141,3 +153,71 @@ async function uploadToOpenAI(
 
     console.log(`[Upload] OpenAI file ID ${openaiFile.id} stored for file ${fileDbId}`)
 }
+
+/**
+ * Download file from R2 and extract text using the parser.
+ * Returns the raw text string, or throws on failure.
+ */
+async function extractTextFromR2(s3Key: string, mimeType: string): Promise<string> {
+    // Skip extraction for images — they don't have extractable text
+    if (mimeType.startsWith('image/')) return ''
+
+    const getCmd = new GetObjectCommand({ Bucket: CLOUDFLARE.R2.BUCKET, Key: s3Key })
+    const s3Response = await s3Client.send(getCmd)
+    if (!s3Response.Body) throw new Error('Empty body from R2')
+
+    const stream = s3Response.Body as Readable
+    const chunks: Buffer[] = []
+    for await (const chunk of stream) {
+        chunks.push(Buffer.from(chunk))
+    }
+    const buffer = Buffer.concat(chunks)
+
+    const parsed = await parseFile(buffer, mimeType)
+    return parsed.rawText
+}
+
+/**
+ * Delete a file from R2, OpenAI, and the database
+ */
+export const deleteFile = createServerFn({ method: "POST" })
+    .inputValidator((data: unknown) => deleteFileSchema.parse(data))
+    .handler(async ({ data }) => {
+        const user = await getAuthenticatedUser()
+        if (!user) throw unauthorized()
+
+        const file = await db.query.files.findFirst({
+            where: and(eq(files.id, data.fileId), eq(files.userId, user.id)),
+        })
+
+        if (!file) return { success: true }
+
+        // 1. Delete from R2
+        const s3Key = (file.metadata as any)?.s3Key
+        if (s3Key) {
+            try {
+                await s3Client.send(new DeleteObjectCommand({
+                    Bucket: CLOUDFLARE.R2.BUCKET,
+                    Key: s3Key,
+                }))
+            } catch (err) {
+                console.error(`[Delete] Failed to delete R2 object ${s3Key}:`, err)
+            }
+        }
+
+        // 2. Delete from OpenAI Files API
+        if (file.openaiFileId) {
+            try {
+                await openai.files.del(file.openaiFileId)
+            } catch (err) {
+                console.error(`[Delete] Failed to delete OpenAI file ${file.openaiFileId}:`, err)
+            }
+        }
+
+        // 3. Delete DB record
+        await db.delete(files)
+            .where(and(eq(files.id, data.fileId), eq(files.userId, user.id)))
+
+        console.log(`[Delete] File ${data.fileId} fully cleaned up`)
+        return { success: true }
+    })

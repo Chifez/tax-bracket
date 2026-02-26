@@ -16,3 +16,7 @@ export const registerFileSchema = z.object({
     batchId: z.string().uuid().optional(),
     bankName: z.string().optional(),
 })
+
+export const deleteFileSchema = z.object({
+    fileId: z.string().uuid(),
+})

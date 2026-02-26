@@ -27,7 +27,10 @@ const config = defineConfig({
   ],
   server: {
     allowedHosts: ['.ngrok-free.app'],
-  }
+  },
+  ssr: {
+    external: ['pdf-parse'],
+  },
 })
 
 export default config
