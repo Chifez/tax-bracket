@@ -4,12 +4,12 @@ import { cn } from '@/lib/utils'
 import { Send, Paperclip, X, FileText, Image, Square, Loader2, CheckCircle2 } from 'lucide-react'
 import { useUser } from '@/hooks/use-auth'
 import { toast } from 'sonner'
-import { deleteFile as deleteFileServer } from '@/server/functions/upload'
+import { deleteFile as deleteFileServer, getFileStatus } from '@/server/functions/upload'
 
 interface AttachedFile {
     localId: string
     name: string
-    status: 'uploading' | 'done' | 'error' | 'deleting'
+    status: 'uploading' | 'processing' | 'done' | 'error' | 'deleting'
     fileId: string | null
 }
 
@@ -20,7 +20,7 @@ interface ChatInputProps {
     onStop: () => void
     isThinking: boolean
     status: 'submitted' | 'streaming' | 'ready' | 'error'
-    uploadFile: (file: File) => Promise<{ file: { id: string } } | null>
+    uploadFile: (file: File) => Promise<{ file: { id: string, status?: string } } | null>
 }
 
 const MAX_HEIGHT = 100
@@ -44,7 +44,7 @@ export function ChatInput({
     const user = data?.user
 
     const isProcessing = isThinking || status === 'streaming' || status === 'submitted'
-    const isAnyUploading = attachedFiles.some(f => f.status === 'uploading')
+    const isAnyUploading = attachedFiles.some(f => f.status === 'uploading' || f.status === 'processing')
     const canSend = (input.trim() || attachedFiles.some(f => f.status === 'done')) &&
         !isProcessing && !isAnyUploading && !disabled
 
@@ -113,13 +113,22 @@ export function ChatInput({
                 try {
                     const result = await uploadFile(file)
                     const uploadedId = result?.file?.id ?? null
+                    const fileStatus = result?.file?.status ?? 'pending'
+
+                    const nextStatus = uploadedId ? (fileStatus === 'completed' ? 'done' : 'processing') : 'error'
+
                     setAttachedFiles(prev =>
                         prev.map(f =>
                             f.localId === localId
-                                ? { ...f, status: uploadedId ? 'done' : 'error', fileId: uploadedId }
+                                ? { ...f, status: nextStatus, fileId: uploadedId }
                                 : f
                         )
                     )
+
+                    if (uploadedId && nextStatus === 'processing') {
+                        pollFileStatus(localId, uploadedId, file.name)
+                    }
+
                     if (!uploadedId) toast.error(`Failed to upload ${file.name}`)
                 } catch {
                     setAttachedFiles(prev =>
@@ -131,6 +140,37 @@ export function ChatInput({
                 }
             })
         )
+    }
+
+    const pollFileStatus = (localId: string, fileId: string, filename: string) => {
+        const interval = setInterval(async () => {
+            try {
+                // Check if file was removed from UI; if so, abort polling
+                let fileExists = false
+                setAttachedFiles(current => {
+                    fileExists = current.some(f => f.localId === localId)
+                    return current
+                })
+
+                if (!fileExists) {
+                    clearInterval(interval)
+                    return
+                }
+
+                const res = await getFileStatus({ data: { fileId } })
+
+                if (res.status === 'completed') {
+                    setAttachedFiles(prev => prev.map(f => f.localId === localId ? { ...f, status: 'done' } : f))
+                    clearInterval(interval)
+                } else if (res.status === 'failed') {
+                    setAttachedFiles(prev => prev.map(f => f.localId === localId ? { ...f, status: 'error' } : f))
+                    toast.error(`Background processing failed for ${filename}`)
+                    clearInterval(interval)
+                }
+            } catch (err) {
+                console.error('[ChatInput] Polling error:', err)
+            }
+        }, 2000)
     }
 
     const removeFile = async (localId: string) => {
@@ -175,7 +215,7 @@ export function ChatInput({
                                 file.status === 'error' && 'bg-destructive/10 text-destructive',
                             )}
                         >
-                            {file.status === 'uploading' || file.status === 'deleting' ? (
+                            {file.status === 'uploading' || file.status === 'processing' || file.status === 'deleting' ? (
                                 <Loader2 size={12} className="animate-spin shrink-0" />
                             ) : file.status === 'done' ? (
                                 <CheckCircle2 size={12} className="text-green-500 shrink-0" />
@@ -183,7 +223,7 @@ export function ChatInput({
                                 <FileText size={12} className="shrink-0" />
                             )}
                             <span className="max-w-[120px] truncate">{file.name}</span>
-                            {file.status !== 'uploading' && file.status !== 'deleting' && (
+                            {file.status !== 'uploading' && file.status !== 'processing' && file.status !== 'deleting' && (
                                 <button
                                     onClick={() => removeFile(file.localId)}
                                     className="text-muted-foreground hover:text-foreground transition-colors"

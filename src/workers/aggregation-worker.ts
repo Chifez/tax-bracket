@@ -13,21 +13,23 @@ export async function startAggregationWorker() {
 
     await queue.createQueue(QUEUE_NAMES.COMPUTE_AGGREGATES)
     // Aggregation worker
-    await queue.work(QUEUE_NAMES.COMPUTE_AGGREGATES, async (job: any) => {
-        const { userId, taxYear } = job.data
-        console.log(`Computing aggregates for user ${userId}, year ${taxYear}...`)
+    await queue.work(QUEUE_NAMES.COMPUTE_AGGREGATES, async (jobs: any[]) => {
+        for (const job of jobs) {
+            const { userId, taxYear } = job.data
+            console.log(`Computing aggregates for user ${userId}, year ${taxYear}...`)
 
-        try {
-            await computeAggregates(userId, taxYear)
+            try {
+                await computeAggregates(userId, taxYear)
 
-            // Chain: after aggregation, build AI context
-            await queue.send(QUEUE_NAMES.BUILD_CONTEXT, {
-                userId,
-                taxYear,
-            })
-        } catch (error: any) {
-            console.error(`Failed to compute aggregates:`, error)
-            throw error
+                // Chain: after aggregation, build AI context
+                await queue.send(QUEUE_NAMES.BUILD_CONTEXT, {
+                    userId,
+                    taxYear,
+                })
+            } catch (error: any) {
+                console.error(`Failed to compute aggregates:`, error)
+                throw error
+            }
         }
     })
 
@@ -35,15 +37,17 @@ export async function startAggregationWorker() {
 
     await queue.createQueue(QUEUE_NAMES.BUILD_CONTEXT)
     // Context builder worker
-    await queue.work(QUEUE_NAMES.BUILD_CONTEXT, async (job: any) => {
-        const { userId, taxYear } = job.data
-        console.log(`Building AI context for user ${userId}, year ${taxYear}...`)
+    await queue.work(QUEUE_NAMES.BUILD_CONTEXT, async (jobs: any[]) => {
+        for (const job of jobs) {
+            const { userId, taxYear } = job.data
+            console.log(`Building AI context for user ${userId}, year ${taxYear}...`)
 
-        try {
-            await buildContext(userId, taxYear)
-        } catch (error: any) {
-            console.error(`Failed to build context:`, error)
-            throw error
+            try {
+                await buildContext(userId, taxYear)
+            } catch (error: any) {
+                console.error(`Failed to build context:`, error)
+                throw error
+            }
         }
     })
 }

@@ -20,3 +20,7 @@ export const registerFileSchema = z.object({
 export const deleteFileSchema = z.object({
     fileId: z.string().uuid(),
 })
+
+export const getFileStatusSchema = z.object({
+    fileId: z.string().uuid(),
+})

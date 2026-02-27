@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getAuthenticatedUser } from '@/server/middleware/auth'
 import { unauthorized } from '@/server/lib/error'
-import { getUploadUrlSchema, registerFileSchema, deleteFileSchema } from '@/server/validators/upload'
+import { getUploadUrlSchema, registerFileSchema, deleteFileSchema, getFileStatusSchema } from '@/server/validators/upload'
 import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { s3Client, CLOUDFLARE } from '@/server/lib/s3'
@@ -208,7 +208,7 @@ export const deleteFile = createServerFn({ method: "POST" })
         // 2. Delete from OpenAI Files API
         if (file.openaiFileId) {
             try {
-                await openai.files.del(file.openaiFileId)
+                await (openai.files as any).del(file.openaiFileId)
             } catch (err) {
                 console.error(`[Delete] Failed to delete OpenAI file ${file.openaiFileId}:`, err)
             }
@@ -220,4 +220,26 @@ export const deleteFile = createServerFn({ method: "POST" })
 
         console.log(`[Delete] File ${data.fileId} fully cleaned up`)
         return { success: true }
+    })
+
+/**
+ * Get the processing status of a file
+ */
+export const getFileStatus = createServerFn({ method: "POST" })
+    .inputValidator((data: unknown) => getFileStatusSchema.parse(data))
+    .handler(async ({ data }) => {
+        const user = await getAuthenticatedUser()
+        if (!user) throw unauthorized()
+
+        const file = await db.query.files.findFirst({
+            where: and(eq(files.id, data.fileId), eq(files.userId, user.id)),
+            columns: {
+                id: true,
+                status: true,
+            }
+        })
+
+        if (!file) throw new Error('File not found')
+
+        return { status: file.status }
     })

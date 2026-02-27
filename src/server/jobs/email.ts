@@ -90,51 +90,57 @@ export async function registerEmailJobs() {
     await boss.createQueue(QUEUE_NAMES.SEND_SUPPORT_EMAIL)
     await boss.createQueue(QUEUE_NAMES.SEND_PRODUCT_UPDATE_EMAIL)
 
-    await boss.work(QUEUE_NAMES.SEND_AUTH_EMAIL, { retryLimit: 3 } as any, async (job: any) => {
-        const payload = job.data as AuthEmailPayload
-        const { subject, html } = getAuthEmailContent(payload)
-        await transporter.sendMail({
-            from: '"TaxBracket" <noreply@taxbracketai.com>',
-            to: payload.to,
-            subject,
-            html,
-        })
+    await boss.work(QUEUE_NAMES.SEND_AUTH_EMAIL, { retryLimit: 3 } as any, async (jobs: any[]) => {
+        for (const job of jobs) {
+            const payload = job.data as AuthEmailPayload
+            const { subject, html } = getAuthEmailContent(payload)
+            await transporter.sendMail({
+                from: '"TaxBracket" <noreply@taxbracketai.com>',
+                to: payload.to,
+                subject,
+                html,
+            })
+        }
     })
 
-    await boss.work(QUEUE_NAMES.SEND_SUPPORT_EMAIL, { retryLimit: 3 } as any, async (job: any) => {
-        const { fromName, fromEmail, type, subject, message } = job.data as SupportEmailPayload
-        const label = type === 'feedback' ? 'Feedback' : 'Help & Support'
-        await transporter.sendMail({
-            from: '"TaxBracket" <support@taxbracketai.com>',
-            to: 'support@taxbracketai.com',
-            replyTo: fromEmail,
-            subject: `[${label}] ${subject}`,
-            html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-                    <h1 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">${label} from ${fromName}</h1>
-                    <p style="font-size: 13px; color: #6b7280; margin-bottom: 24px;">${fromEmail}</p>
-                    <p style="white-space: pre-wrap; line-height: 1.6; color: #111827;">${message}</p>
-                </div>
-            `,
-        })
+    await boss.work(QUEUE_NAMES.SEND_SUPPORT_EMAIL, { retryLimit: 3 } as any, async (jobs: any[]) => {
+        for (const job of jobs) {
+            const { fromName, fromEmail, type, subject, message } = job.data as SupportEmailPayload
+            const label = type === 'feedback' ? 'Feedback' : 'Help & Support'
+            await transporter.sendMail({
+                from: '"TaxBracket" <support@taxbracketai.com>',
+                to: 'support@taxbracketai.com',
+                replyTo: fromEmail,
+                subject: `[${label}] ${subject}`,
+                html: `
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+                        <h1 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">${label} from ${fromName}</h1>
+                        <p style="font-size: 13px; color: #6b7280; margin-bottom: 24px;">${fromEmail}</p>
+                        <p style="white-space: pre-wrap; line-height: 1.6; color: #111827;">${message}</p>
+                    </div>
+                `,
+            })
+        }
     })
 
-    await boss.work(QUEUE_NAMES.SEND_PRODUCT_UPDATE_EMAIL, { retryLimit: 3 } as any, async (job: any) => {
-        const payload = job.data as ProductUpdateEmailPayload
-        await transporter.sendMail({
-            from: '"TaxBracket" <hello@taxbracketai.com>',
-            to: payload.to,
-            subject: payload.subject,
-            html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
-                    <h1 style="font-size: 22px; font-weight: 700; margin-bottom: 16px;">${payload.subject}</h1>
-                    <div style="line-height: 1.6; color: #374151;">${payload.content}</div>
-                    <p style="margin-top: 40px; font-size: 11px; color: #9ca3af;">
-                        You're receiving this because you opted in to product updates from TaxBracket.<br/>
-                        To unsubscribe, update your <a href="${process.env.APP_URL || 'https://taxbracketai.com'}/settings" style="color: #6b7280;">notification preferences</a>.
-                    </p>
-                </div>
-            `,
-        })
+    await boss.work(QUEUE_NAMES.SEND_PRODUCT_UPDATE_EMAIL, { retryLimit: 3 } as any, async (jobs: any[]) => {
+        for (const job of jobs) {
+            const payload = job.data as ProductUpdateEmailPayload
+            await transporter.sendMail({
+                from: '"TaxBracket" <hello@taxbracketai.com>',
+                to: payload.to,
+                subject: payload.subject,
+                html: `
+                    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 32px;">
+                        <h1 style="font-size: 22px; font-weight: 700; margin-bottom: 16px;">${payload.subject}</h1>
+                        <div style="line-height: 1.6; color: #374151;">${payload.content}</div>
+                        <p style="margin-top: 40px; font-size: 11px; color: #9ca3af;">
+                            You're receiving this because you opted in to product updates from TaxBracket.<br/>
+                            To unsubscribe, update your <a href="${process.env.APP_URL || 'https://taxbracketai.com'}/settings" style="color: #6b7280;">notification preferences</a>.
+                        </p>
+                    </div>
+                `,
+            })
+        }
     })
 }

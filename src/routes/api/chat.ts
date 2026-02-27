@@ -136,8 +136,12 @@ export const Route = createFileRoute('/api/chat')({
                 }
 
                 const { prompt: systemMessage, retrieval, stats } = await buildDynamicPrompt(
-                    lastContent || 'Hello',
-                    compactContext
+                    lastContent || 'Analyze the uploaded financial data.',
+                    compactContext,
+                    {
+                        userId: user.id,
+                        fileId: currentFileIds
+                    }
                 )
 
                 if (stats.ragTokens > 0) {
@@ -173,46 +177,32 @@ export const Route = createFileRoute('/api/chat')({
                 // - For images: inject as a FilePart using the public URL
                 // We deliberately avoid the openaiFileId here because the AI SDK's ModelMessage schema
                 // requires data to be base64, Uint8Array, or a URL — not a raw OpenAI file ID string.
+                // File injection is now handled via RAG (buildDynamicPrompt).
+                // Images still need to be handled if supported by the model, 
+                // but raw PDF/CSV text MUST NOT be injected here.
                 if (currentFileIds.length > 0) {
                     try {
                         const attachedFiles = await db.query.files.findMany({
                             where: (f, { inArray }) => inArray(f.id, currentFileIds),
-                            columns: { id: true, url: true, extractedText: true, metadata: true, status: true },
+                            columns: { id: true, url: true, metadata: true },
                         })
 
                         const extraParts: any[] = []
-
                         for (const f of attachedFiles) {
                             const mimeType: string = (f.metadata as any)?.mimeType ?? ''
                             const isImage = mimeType.startsWith('image/')
 
                             if (isImage) {
-                                // Images: pass as a FilePart with a proper URL
                                 extraParts.push({
                                     type: 'file' as const,
                                     data: new URL(f.url),
                                     mimeType,
                                 })
-                            } else if (f.extractedText) {
-                                // Processed text file (CSV / PDF): inject as inline text
-                                const name = (f.metadata as any)?.originalName ?? 'file'
-                                extraParts.push({
-                                    type: 'text' as const,
-                                    text: `--- Attached file: ${name} ---\n${f.extractedText}\n--- End of file ---`,
-                                })
-                            } else {
-                                // File is still processing — note in context so the model knows
-                                const name = (f.metadata as any)?.originalName ?? 'file'
-                                console.log(`[Chat] File ${f.id} (${name}) not yet processed, skipping injection`)
-                                extraParts.push({
-                                    type: 'text' as const,
-                                    text: `[Note: the file "${name}" was just uploaded and is still being processed. It will be available in future messages.]`,
-                                })
                             }
                         }
 
                         if (extraParts.length > 0) {
-                            console.log(`[Chat] Injecting ${extraParts.length} file part(s) into last user message`)
+                            console.log(`[Chat] Injecting ${extraParts.length} image part(s) into last user message`)
                             const lastIdx = convertedMessages.length - 1
                             const lastConverted = convertedMessages[lastIdx]
                             if (lastConverted && lastConverted.role === 'user') {
@@ -226,7 +216,7 @@ export const Route = createFileRoute('/api/chat')({
                             }
                         }
                     } catch (err) {
-                        console.error('[Chat] Failed to inject file content:', err)
+                        console.error('[Chat] Failed to inject image content:', err)
                     }
                 }
 
@@ -275,6 +265,7 @@ export const Route = createFileRoute('/api/chat')({
                     messages: convertedMessages,
                     tools,
                     toolChoice: 'required',
+
                     onError: (error) => {
                         console.error('Generative UI Error:', error)
                     },
