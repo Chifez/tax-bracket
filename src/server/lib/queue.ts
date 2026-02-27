@@ -14,7 +14,7 @@ export const getQueue = async () => {
     // Start boss (it handles schema creation)
     await boss.start()
 
-    console.log('Queue system started')
+    console.log('[Queue] PgBoss client connected')
     return boss
 }
 

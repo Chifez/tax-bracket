@@ -36,6 +36,10 @@ export function ChatInput({
 }: ChatInputProps) {
     const [input, setInput] = useState('')
     const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
+    const attachedFilesRef = useRef<AttachedFile[]>([])
+    useEffect(() => {
+        attachedFilesRef.current = attachedFiles
+    }, [attachedFiles])
     const [showAttachMenu, setShowAttachMenu] = useState(false)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -146,13 +150,7 @@ export function ChatInput({
         const interval = setInterval(async () => {
             try {
                 // Check if file was removed from UI; if so, abort polling
-                let fileExists = false
-                setAttachedFiles(current => {
-                    fileExists = current.some(f => f.localId === localId)
-                    return current
-                })
-
-                if (!fileExists) {
+                if (!attachedFilesRef.current.some(f => f.localId === localId)) {
                     clearInterval(interval)
                     return
                 }

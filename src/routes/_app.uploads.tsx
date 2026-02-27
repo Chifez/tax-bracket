@@ -15,7 +15,7 @@ import { useState, useRef, useCallback } from 'react'
 import { useUser } from '@/hooks/use-auth'
 import { toast } from 'sonner'
 import {
-  useUserFiles,
+  useFileStatusPolling,
   useFileUpload,
   useDeleteFile,
   useCreateBatch,
@@ -111,7 +111,7 @@ function UploadsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Data fetching
-  const { data: filesData, isLoading: filesLoading } = useUserFiles(selectedYear)
+  const { data: filesData, isLoading: filesLoading } = useFileStatusPolling(selectedYear)
   const { data: summaryData } = useTransactionSummary(selectedYear)
 
   // Mutations
