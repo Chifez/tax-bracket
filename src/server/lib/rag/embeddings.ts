@@ -9,9 +9,18 @@ import { knowledgeChunks as knowledgeChunksTable } from '@/db/schema'
 import { knowledgeChunks } from './knowledge-chunks'
 import { eq, sql } from 'drizzle-orm'
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-})
+let _openai: OpenAI | null = null
+function getOpenAI() {
+    if (!_openai) {
+        if (!process.env.OPENAI_API_KEY) {
+            throw new Error('OPENAI_API_KEY is not set in environment variables')
+        }
+        _openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        })
+    }
+    return _openai
+}
 
 // Model configuration
 const EMBEDDING_MODEL = 'text-embedding-3-small'
@@ -21,7 +30,7 @@ const EMBEDDING_DIMENSIONS = 1536
  * Generate embedding for a text string
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-    const response = await openai.embeddings.create({
+    const response = await getOpenAI().embeddings.create({
         model: EMBEDDING_MODEL,
         input: text,
         dimensions: EMBEDDING_DIMENSIONS,
@@ -34,7 +43,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
  * Generate embeddings for multiple texts (batch)
  */
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
-    const response = await openai.embeddings.create({
+    const response = await getOpenAI().embeddings.create({
         model: EMBEDDING_MODEL,
         input: texts,
         dimensions: EMBEDDING_DIMENSIONS,
@@ -135,7 +144,11 @@ export async function seedKnowledgeChunks(): Promise<{
 export async function searchSimilarChunks(
     queryEmbedding: number[],
     limit: number = 5,
-    minSimilarity: number = 0.5
+    minSimilarity: number = 0.5,
+    filters?: {
+        userId?: string
+        fileId?: string | string[]
+    }
 ): Promise<{
     chunkId: string
     title: string
@@ -154,6 +167,12 @@ export async function searchSimilarChunks(
         FROM knowledge_chunks
         WHERE embedding IS NOT NULL
         AND 1 - (embedding <=> ${JSON.stringify(queryEmbedding)}::vector) > ${minSimilarity}
+        ${filters?.userId ? sql`AND user_id = ${filters.userId}` : sql``}
+        ${filters?.fileId ? (
+            Array.isArray(filters.fileId)
+                ? sql`AND file_id IN (${sql.join(filters.fileId, sql`, `)})`
+                : sql`AND file_id = ${filters.fileId}`
+        ) : sql``}
         ORDER BY similarity DESC
         LIMIT ${limit}
     `)

@@ -31,6 +31,8 @@ export async function retrieveRelevantChunks(
         minSimilarity?: number
         includeCore?: boolean
         maxTokens?: number
+        userId?: string
+        fileId?: string | string[]
     } = {}
 ): Promise<RetrievalResult> {
     const {
@@ -38,6 +40,8 @@ export async function retrieveRelevantChunks(
         minSimilarity = 0.5,
         includeCore = true,
         maxTokens = 2000,
+        userId,
+        fileId,
     } = options
 
     const startTime = Date.now()
@@ -50,7 +54,8 @@ export async function retrieveRelevantChunks(
         const similarChunks = await searchSimilarChunks(
             queryEmbedding,
             limit,
-            minSimilarity
+            minSimilarity,
+            { userId, fileId }
         )
 
         // Convert to RetrievedChunk format
@@ -66,7 +71,7 @@ export async function retrieveRelevantChunks(
         if (includeCore) {
             const coreChunks = getCoreChunks()
             const coreIds = new Set(chunks.map(c => c.id))
-            
+
             for (const core of coreChunks) {
                 if (!coreIds.has(core.id)) {
                     chunks.unshift({

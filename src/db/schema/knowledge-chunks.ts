@@ -1,4 +1,6 @@
-import { pgTable, uuid, varchar, text, integer, timestamp, jsonb, index, customType } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, text, integer, timestamp, jsonb, index, customType, uniqueIndex } from 'drizzle-orm/pg-core'
+import { users } from './users'
+import { files } from './files'
 
 // Custom vector type for pgvector
 const vector = customType<{ data: number[]; config: { dimensions: number } }>({
@@ -18,20 +20,24 @@ const vector = customType<{ data: number[]; config: { dimensions: number } }>({
 
 export const knowledgeChunks = pgTable('knowledge_chunks', {
     id: uuid('id').primaryKey().defaultRandom(),
-    chunkId: varchar('chunk_id', { length: 100 }).notNull().unique(),
+    chunkId: varchar('chunk_id', { length: 100 }).notNull(),
     title: varchar('title', { length: 255 }).notNull(),
     content: text('content').notNull(),
     category: varchar('category', { length: 50 }).notNull(),
     tags: jsonb('tags').$type<string[]>().notNull().default([]),
     priority: integer('priority').notNull().default(5),
-    
+
+    // User/File context for RAG
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    fileId: uuid('file_id').references(() => files.id, { onDelete: 'cascade' }),
+
     // Vector embedding (1536 dimensions for text-embedding-3-small)
     embedding: vector('embedding', { dimensions: 1536 }),
-    
+
     // Metadata
     tokenCount: integer('token_count'),
     version: integer('version').notNull().default(1),
-    
+
     // Timestamps
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -41,6 +47,7 @@ export const knowledgeChunks = pgTable('knowledge_chunks', {
     // The index is: CREATE INDEX ... USING hnsw (embedding vector_cosine_ops)
     categoryIdx: index('knowledge_chunks_category_idx').on(table.category),
     chunkIdIdx: index('knowledge_chunks_chunk_id_idx').on(table.chunkId),
+    userFileIdx: index('knowledge_chunks_user_file_idx').on(table.userId, table.fileId),
 }))
 
 export type KnowledgeChunk = typeof knowledgeChunks.$inferSelect

@@ -6,7 +6,8 @@ import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { s3Client } from '@/server/lib/s3'
 import { parseFile } from '@/server/lib/parser'
 import { normalizeRows } from '@/server/lib/normalizer'
-import { deduplicateBatch, deduplicateAgainstExisting, generateTransactionHash } from '@/server/lib/deduplicator'
+import { generateTransactionHash, deduplicateBatch, deduplicateAgainstExisting } from '@/server/lib/deduplicator'
+import { generateSemanticSummaries, embedSummaries, chunkText } from '@/server/lib/rag/semantic-enricher'
 import { Readable } from 'stream'
 
 export async function startFileProcessor() {
@@ -100,7 +101,41 @@ export async function startFileProcessor() {
                 console.log(`  Inserted ${uniqueTransactions.length} transactions`)
             }
 
-            // 8. Update file record
+            // 8. Generate and embed semantic summaries (Enrichment)
+            if (uniqueTransactions.length > 0) {
+                try {
+                    console.log(`  Generating semantic summaries for ${uniqueTransactions.length} transactions...`)
+                    // We need to fetch the newly inserted records to get their IDs and full context if needed, 
+                    // but for enrichment we can use the uniqueTransactions array directly.
+                    // Map back to a full Transaction type for the enricher.
+                    const summaries = await generateSemanticSummaries(uniqueTransactions as any)
+                    await embedSummaries(userId, fileId, summaries)
+                    console.log(`  Enrichment complete: ${summaries.length} chunks created.`)
+                } catch (enrichError) {
+                    console.error('  Semantic enrichment failed (non-critical):', enrichError)
+                }
+            }
+
+            // 8.5 Embed raw document text as context
+            if (parsed.rawText && parsed.rawText.trim().length > 0) {
+                try {
+                    console.log(`  Chunking raw document text (${parsed.rawText.length} chars)...`)
+                    const rawChunks = chunkText(parsed.rawText, 1500)
+                    const textSummaries = rawChunks.map((content, idx) => ({
+                        title: `Document Content (Part ${idx + 1})`,
+                        content
+                    }))
+
+                    if (textSummaries.length > 0) {
+                        await embedSummaries(userId, fileId, textSummaries)
+                        console.log(`  Raw text embedded: ${textSummaries.length} chunks created.`)
+                    }
+                } catch (textError) {
+                    console.error('  Raw text embedding failed (non-critical):', textError)
+                }
+            }
+
+            // 9. Update file record
             await db.update(files)
                 .set({
                     status: 'completed',

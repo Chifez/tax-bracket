@@ -18,7 +18,7 @@ export function CreditDisplay({ isCollapsed = false, className }: CreditDisplayP
         return null
     }
 
-    const percentageRemaining = 100 - credits.percentageUsed
+    const percentageRemaining = credits.percentageRemaining
     const isLow = percentageRemaining <= 50
     const isCritical = percentageRemaining <= 5
     const showBuyButton = credits.purchaseEnabled && (isLow || isCritical)

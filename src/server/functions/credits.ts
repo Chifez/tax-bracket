@@ -18,6 +18,7 @@ export const getUserCredits = createServerFn({ method: 'GET' })
             limit: stats.limit,
             used: stats.used,
             percentageUsed: stats.percentageUsed,
+            percentageRemaining: stats.percentageRemaining,
             resetAt: stats.resetAt.toISOString(),
             daysUntilReset: stats.daysUntilReset,
             hoursUntilReset: stats.hoursUntilReset,

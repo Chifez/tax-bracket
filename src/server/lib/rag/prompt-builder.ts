@@ -30,6 +30,8 @@ export async function buildDynamicPrompt(
     options: {
         maxTokens?: number
         includeCore?: boolean
+        userId?: string
+        fileId?: string | string[]
     } = {}
 ): Promise<{
     prompt: string
@@ -41,7 +43,7 @@ export async function buildDynamicPrompt(
         totalTokens: number
     }
 }> {
-    const { maxTokens = 3000, includeCore = true } = options
+    const { maxTokens = 3000, includeCore = true, userId, fileId } = options
 
     // Reserve tokens for core prompt and context
     const coreTokens = estimateTokens(CORE_PROMPT)
@@ -55,6 +57,8 @@ export async function buildDynamicPrompt(
         minSimilarity: 0.4,
         includeCore: includeCore,
         maxTokens: Math.max(ragBudget, 500),
+        userId,
+        fileId,
     })
 
     // Build RAG context
@@ -88,8 +92,8 @@ ${contextSection}`
 function buildContextSection(taxContext: CompactTaxContext | null): string {
     if (!taxContext) {
         return `# FINANCIAL DATA CONTEXT
-
-No bank statements have been uploaded and processed yet. Encourage the user to upload their bank statements for analysis.`
+    
+    No aggregated summary is available. However, check the # RELEVANT KNOWLEDGE section for specific transaction summaries and patterns retrieved from uploaded files. Use those chunks to provide analysis. If no relevant chunks are found, encourage the user to upload a statement to begin.`
     }
 
     return `# FINANCIAL DATA CONTEXT (AUTHORITATIVE)

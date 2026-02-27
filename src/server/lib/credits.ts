@@ -129,8 +129,10 @@ export async function getAvailableCredits(userId: string): Promise<{
         getTotalPurchasedCredits(userId),
     ])
 
-    // Effective limit = weekly limit + purchased credits
-    const effectiveLimit = user.creditsLimit + purchasedCredits
+    const flags = getFeatureFlags()
+
+    // Effective limit = (weekly limit if enabled) + purchased credits
+    const effectiveLimit = (flags.weeklyCreditsReset ? user.creditsLimit : 0) + purchasedCredits
     const remaining = Math.max(0, totalBalance)
 
     return {
@@ -268,9 +270,11 @@ export async function getCreditStats(userId: string) {
     const daysUntilReset = Math.ceil(msUntilReset / (1000 * 60 * 60 * 24))
     const hoursUntilReset = Math.ceil(msUntilReset / (1000 * 60 * 60))
 
-    const percentageUsed = credits.effectiveLimit > 0
-        ? Math.round((credits.used / credits.effectiveLimit) * 100)
+    const percentageRemaining = credits.effectiveLimit > 0
+        ? Math.max(0, Math.min(100, Math.round((credits.remaining / credits.effectiveLimit) * 100)))
         : 0
+
+    const percentageUsed = 100 - percentageRemaining
 
     return {
         remaining: credits.remaining,
@@ -279,6 +283,7 @@ export async function getCreditStats(userId: string) {
         effectiveLimit: credits.effectiveLimit,
         purchasedCredits: credits.purchasedCredits,
         percentageUsed,
+        percentageRemaining,
         daysUntilReset,
         hoursUntilReset,
         resetAt: nextReset,

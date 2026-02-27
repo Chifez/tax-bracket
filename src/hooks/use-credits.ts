@@ -6,6 +6,7 @@ export interface CreditStats {
     limit: number
     used: number
     percentageUsed: number
+    percentageRemaining: number
     resetAt: string
     daysUntilReset: number
     hoursUntilReset: number
