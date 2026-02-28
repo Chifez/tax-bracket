@@ -140,7 +140,7 @@ export const Route = createFileRoute('/api/chat')({
                     compactContext,
                     {
                         userId: user.id,
-                        fileId: currentFileIds
+                        fileId: currentFileIds.length > 0 ? currentFileIds : undefined
                     }
                 )
 

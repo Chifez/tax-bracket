@@ -135,12 +135,8 @@ export function detectDirection(
         /^(debit|dr|withdrawal|money\s*out|outflow)$/i.test(h)
     )
 
-    if (creditKey && debitKey) {
-        const creditVal = parseAmount(row[creditKey])
-        const debitVal = parseAmount(row[debitKey])
-        if (creditVal && creditVal > 0) return 'credit'
-        if (debitVal && debitVal > 0) return 'debit'
-    }
+    if (creditKey && parseAmount(row[creditKey]) !== null) return 'credit'
+    if (debitKey && parseAmount(row[debitKey]) !== null) return 'debit'
 
     // Check for a "type" or "direction" column
     const typeKey = headers.find(h =>
@@ -182,9 +178,14 @@ export function extractAmount(
         /^(debit|dr|withdrawal|money\s*out|outflow)$/i.test(h)
     )
 
-    if (creditKey && debitKey) {
-        if (direction === 'credit') return parseAmount(row[creditKey])
-        return parseAmount(row[debitKey])
+    if (creditKey || debitKey) {
+        if (direction === 'credit' && creditKey) return parseAmount(row[creditKey])
+        if (direction === 'debit' && debitKey) return parseAmount(row[debitKey])
+
+        // Fallback: if one is completely missing but the other exists, just use the existing one's value
+        // Warning: This ignores 'direction', but safely captures the number
+        if (creditKey && parseAmount(row[creditKey]) !== null) return parseAmount(row[creditKey])
+        if (debitKey && parseAmount(row[debitKey]) !== null) return parseAmount(row[debitKey])
     }
 
     // Single amount column

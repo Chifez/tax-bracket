@@ -170,7 +170,7 @@ export async function searchSimilarChunks(
         ${filters?.userId ? sql`AND user_id = ${filters.userId}` : sql``}
         ${filters?.fileId ? (
             Array.isArray(filters.fileId)
-                ? sql`AND file_id IN (${sql.join(filters.fileId, sql`, `)})`
+                ? (filters.fileId.length > 0 ? sql`AND file_id IN (${sql.join(filters.fileId, sql`, `)})` : sql``)
                 : sql`AND file_id = ${filters.fileId}`
         ) : sql``}
         ORDER BY similarity DESC

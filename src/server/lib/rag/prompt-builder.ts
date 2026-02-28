@@ -4,6 +4,9 @@
  * Builds optimized system prompts using retrieved RAG chunks
  */
 
+import { db } from '@/db'
+import { files } from '@/db/schema'
+import { inArray } from 'drizzle-orm'
 import type { CompactTaxContext } from '@/db/schema/tax-context'
 import { retrieveRelevantChunks, buildContextFromChunks, type RetrievalResult } from './retriever'
 
@@ -15,13 +18,12 @@ const CORE_PROMPT = `You are TaxBracket AI, an advanced financial analyst and ta
 Your core mission: Analyze Nigerian bank statements, provide actionable financial insights, calculate taxes based on the Nigeria Tax Act 2025 (effective January 1, 2026), and deliver professional financial advice.
 
 CRITICAL RULES:
-1. You MUST ALWAYS use the generate_ui_blocks tool for EVERY response
-2. Never provide plain text responses without using the tool
-3. Use Nigerian Naira (₦) for all currency values
-4. Format numbers with commas: ₦1,500,000.00
-5. Be professional, accurate, and action-oriented
-6. NEVER return empty arrays (like empty 'sections' or 'charts'). If there is no data, completely omit the property.
-7. Proactively use 'data-table' and 'charts' to visualize financial breakdowns. Users understand numeric analysis much better when visualized.`
+1. You MUST ALWAYS use the generate_ui_blocks tool for EVERY response.
+2. Never provide plain text responses entirely outside of the tool.
+3. Use Nigerian Naira (₦) for all currency values and format numbers with commas (e.g., ₦1,500,000.00).
+4. Be professional, deeply engaging, and highly conversational. NEVER just output a table or chart on its own. ALWAYS provide comprehensive, conversational text \`sections\` that explain the data, narrate your findings, and provide actionable advice.
+5. NEVER return empty arrays (like empty 'sections' or 'charts'). If there is no data, completely omit the property.
+6. Proactively use 'data-table' and 'charts' to visualize financial breakdowns alongside your text.`
 
 /**
  * Build a dynamic system prompt using RAG
@@ -45,20 +47,48 @@ export async function buildDynamicPrompt(
         totalTokens: number
     }
 }> {
-    const { maxTokens = 3000, includeCore = true, userId, fileId } = options
+    const { maxTokens = 60000, includeCore = true, userId, fileId } = options
 
     // Reserve tokens for core prompt and context
     const coreTokens = estimateTokens(CORE_PROMPT)
     const contextSection = buildContextSection(taxContext)
     const contextTokens = estimateTokens(contextSection)
-    const ragBudget = maxTokens - coreTokens - contextTokens - 200 // 200 buffer
 
-    // Retrieve relevant chunks
+    // Fetch direct file text if available (Bypass fragmented RAG for active documents)
+    const hasFile = Array.isArray(fileId) ? fileId.length > 0 : !!fileId;
+    let fileTextContext = ''
+    let fileTokens = 0
+    if (hasFile) {
+        const fileIdsArray = Array.isArray(fileId) ? fileId : [fileId as string]
+        if (fileIdsArray.length > 0) {
+            try {
+                const dbFiles = await db.query.files.findMany({
+                    where: inArray(files.id, fileIdsArray),
+                    columns: { extractedText: true, metadata: true }
+                })
+
+                for (const f of dbFiles) {
+                    if (f.extractedText && f.extractedText.trim().length > 50) {
+                        const name = (f.metadata as any)?.originalName || 'Document'
+                        fileTextContext += `\n\n### FULL EXPERT DOCUMENT: ${name}\n${f.extractedText}\n\n`
+                    }
+                }
+                fileTokens = estimateTokens(fileTextContext)
+            } catch (err) {
+                console.error('Failed to fetch raw file text for prompt injection:', err)
+            }
+        }
+    }
+
+    // Adjust RAG budget accounting for the full text injection
+    const ragBudgetReal = maxTokens - coreTokens - contextTokens - fileTokens - 200
+
+    // Retrieve relevant chunks (mostly useful for historical data or generated insights)
     const retrieval = await retrieveRelevantChunks(query, {
-        limit: 8,
+        limit: hasFile ? 10 : 15,
         minSimilarity: 0.4,
         includeCore: includeCore,
-        maxTokens: Math.max(ragBudget, 500),
+        maxTokens: Math.max(ragBudgetReal, 500),
         userId,
         fileId,
     })
@@ -74,6 +104,8 @@ export async function buildDynamicPrompt(
 
 ${ragContext}
 
+${fileTextContext}
+
 ${contextSection}`
 
     return {
@@ -83,7 +115,7 @@ ${contextSection}`
             coreTokens,
             ragTokens,
             contextTokens,
-            totalTokens: coreTokens + ragTokens + contextTokens,
+            totalTokens: coreTokens + ragTokens + contextTokens + fileTokens,
         },
     }
 }

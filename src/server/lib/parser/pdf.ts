@@ -49,15 +49,12 @@ async function buildStructuredRows(allTextItems: TextItem[]): Promise<{
 
         for (const item of rowItems) {
             // Use horizontal center point for column assignment.
-            // Center-based is more robust than left-edge — right-aligned
-            // numeric cells (amounts, balances) often start left of their
-            // column's boundary but their center is clearly within it.
             const itemCenterX = item.x + item.width / 2;
             const col = columns.find(c => itemCenterX >= c.startX && itemCenterX < c.endX);
 
             if (col) {
-                // Append if column already has a value — handles multi-word
-                // narrations like "TRANSFER TO JOHN DOE FT/2025/001"
+                // If it's a known multi-word duplicate column (like narration_1, narration_2), 
+                // we'll later flatten it in the normalizer. For now, store exactly where it landed.
                 rowObj[col.standardizedName] = rowObj[col.standardizedName]
                     ? `${rowObj[col.standardizedName]} ${item.text}`
                     : item.text;
