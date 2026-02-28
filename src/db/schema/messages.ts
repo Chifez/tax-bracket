@@ -13,7 +13,7 @@ export const messages = pgTable('messages', {
     stats: json('stats'), // MessageStats
     sources: json('sources'), // Array of Source
     metadata: json('metadata'), // Flexible metadata
-    createdAt: timestamp('created_at').notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
 export type Message = typeof messages.$inferSelect

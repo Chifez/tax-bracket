@@ -333,7 +333,6 @@ export const Route = createFileRoute('/api/chat')({
                                 blocks: blocks,
                                 sources: sources
                             } as any,
-                            createdAt: new Date(),
                         })
                     }
                 })

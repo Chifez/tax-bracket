@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { db } from '@/db'
 import { chats, messages } from '@/db/schema'
-import { eq, desc, and, gt } from 'drizzle-orm'
+import { eq, desc, and, gt, sql } from 'drizzle-orm'
 import { getAuthenticatedUser } from '@/server/middleware/auth'
 import { createChatSchema, sendMessageSchema, getChatSchema, deleteChatSchema, editMessageSchema, renameChatSchema } from '@/server/validators/chat'
 import { notFound, unauthorized } from '@/server/lib/error'
@@ -72,7 +72,9 @@ export const getChat = createServerFn()
         const chat = await db.query.chats.findFirst({
             where: and(eq(chats.id, data.chatId), eq(chats.userId, user.id)),
             with: {
-                messages: true
+                messages: {
+                    orderBy: (messages, { asc }) => [asc(messages.createdAt)]
+                }
             }
         })
 
@@ -137,7 +139,8 @@ export const createChat = createServerFn({ method: 'POST' })
                 content: mockData.content,
                 sections: mockData.sections,
                 charts: 'charts' in mockData ? (mockData as any).charts : undefined,
-                stats: mockData.stats
+                stats: mockData.stats,
+                createdAt: sql`now() + interval '10 milliseconds'`
             }).returning()
             savedMessages.push(aiMsg)
         }
@@ -213,7 +216,8 @@ export const sendMessage = createServerFn({ method: 'POST' })
                 content: mockData.content,
                 sections: mockData.sections,
                 charts: 'charts' in mockData ? (mockData as any).charts : undefined,
-                stats: mockData.stats
+                stats: mockData.stats,
+                createdAt: sql`now() + interval '10 milliseconds'`
             })
 
             return {

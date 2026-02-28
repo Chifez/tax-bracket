@@ -36,6 +36,7 @@ export function ChatInput({
 }: ChatInputProps) {
     const [input, setInput] = useState('')
     const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
+    const [queuedMessage, setQueuedMessage] = useState<{ text: string } | null>(null)
     const attachedFilesRef = useRef<AttachedFile[]>([])
     useEffect(() => {
         attachedFilesRef.current = attachedFiles
@@ -47,10 +48,14 @@ export function ChatInput({
     const { data } = useUser()
     const user = data?.user
 
-    const isProcessing = isThinking || status === 'streaming' || status === 'submitted'
-    const isAnyUploading = attachedFiles.some(f => f.status === 'uploading' || f.status === 'processing')
-    const canSend = (input.trim() || attachedFiles.some(f => f.status === 'done')) &&
-        !isProcessing && !isAnyUploading && !disabled
+    const isProcessingBackend = isThinking || status === 'streaming' || status === 'submitted'
+    // Block standard send ONLY if actively uploading to S3
+    const isActivelyUploading = attachedFiles.some(f => f.status === 'uploading')
+    const isActivelyProcessing = attachedFiles.some(f => f.status === 'processing') || queuedMessage !== null
+
+    // We allow Send as long as we aren't uploading to S3 and aren't already generating a backend response
+    const canSendState = (input.trim() || attachedFiles.some(f => f.status === 'done' || f.status === 'processing')) &&
+        !isProcessingBackend && !isActivelyUploading && !disabled
 
     // Auto-expand textarea
     const adjustHeight = useCallback(() => {
@@ -65,12 +70,41 @@ export function ChatInput({
         adjustHeight()
     }, [input, adjustHeight])
 
+    // Effect for the Async Intent Queueing
+    // Fires when files finish processing but there is a message waiting.
+    useEffect(() => {
+        if (!queuedMessage) return;
+
+        // Check if all files are completely done processing
+        const hasProcessing = attachedFiles.some(f => f.status === 'processing' || f.status === 'uploading');
+        if (!hasProcessing) {
+            const readyFileIds = attachedFiles
+                .filter(f => f.status === 'done' && f.fileId)
+                .map(f => f.fileId!);
+
+            // Dispatch to parent components
+            onSend(queuedMessage.text, readyFileIds.length > 0 ? readyFileIds : undefined);
+
+            // Clear local queue
+            setQueuedMessage(null);
+            setAttachedFiles([]);
+        }
+    }, [attachedFiles, queuedMessage, onSend]);
+
     const handleSendClick = async () => {
         if (!user) {
             toast.error('You must be logged in to send messages')
             return
         }
-        if (!canSend) return
+        if (!canSendState) return
+
+        // If files are still processing on the backend, queue the intent!
+        const hasProcessing = attachedFiles.some(f => f.status === 'processing')
+        if (hasProcessing) {
+            setQueuedMessage({ text: input })
+            setInput('')
+            return
+        }
 
         const readyFileIds = attachedFiles
             .filter(f => f.status === 'done' && f.fileId)
@@ -89,7 +123,7 @@ export function ChatInput({
     }
 
     const onEnter = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey && canSend) {
+        if (e.key === 'Enter' && !e.shiftKey && canSendState) {
             e.preventDefault()
             handleSendClick()
         }
@@ -244,7 +278,7 @@ export function ChatInput({
                         size="icon"
                         className="h-8 w-8 shrink-0 rounded-lg"
                         onClick={() => setShowAttachMenu(!showAttachMenu)}
-                        disabled={disabled || isProcessing}
+                        disabled={disabled || isProcessingBackend || queuedMessage !== null}
                     >
                         <Paperclip size={16} />
                     </Button>
@@ -284,20 +318,22 @@ export function ChatInput({
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={onEnter}
                     placeholder={
-                        isAnyUploading
-                            ? 'Processing file...'
-                            : disabled
-                                ? 'Start a new chat...'
-                                : 'Ask a question...'
+                        isActivelyUploading
+                            ? 'Uploading file...'
+                            : queuedMessage !== null
+                                ? 'Analyzing document...'
+                                : disabled
+                                    ? 'Start a new chat...'
+                                    : 'Ask a question...'
                     }
-                    disabled={disabled || isProcessing}
+                    disabled={disabled || isProcessingBackend || queuedMessage !== null}
                     className="flex-1 min-h-[36px] border-0 bg-transparent resize-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 py-2 text-base md:text-[13px] placeholder:text-muted-foreground disabled:opacity-50"
                     rows={1}
                     style={{ overflowY: 'hidden' }}
                 />
 
                 {/* Send/Stop Button */}
-                {isProcessing ? (
+                {isProcessingBackend ? (
                     <Button
                         type="button"
                         size="icon"
@@ -311,10 +347,10 @@ export function ChatInput({
                         type="button"
                         size="icon"
                         onClick={handleSendClick}
-                        disabled={!canSend}
+                        disabled={!canSendState && queuedMessage === null}
                         className="h-8 w-8 shrink-0 rounded-lg"
                     >
-                        {isAnyUploading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                        {isActivelyUploading || queuedMessage !== null || isActivelyProcessing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                     </Button>
                 )}
             </div>

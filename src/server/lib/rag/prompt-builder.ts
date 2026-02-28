@@ -19,7 +19,9 @@ CRITICAL RULES:
 2. Never provide plain text responses without using the tool
 3. Use Nigerian Naira (₦) for all currency values
 4. Format numbers with commas: ₦1,500,000.00
-5. Be professional, accurate, and action-oriented`
+5. Be professional, accurate, and action-oriented
+6. NEVER return empty arrays (like empty 'sections' or 'charts'). If there is no data, completely omit the property.
+7. Proactively use 'data-table' and 'charts' to visualize financial breakdowns. Users understand numeric analysis much better when visualized.`
 
 /**
  * Build a dynamic system prompt using RAG
