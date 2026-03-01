@@ -7,13 +7,15 @@
  * 2. Runs drizzle-kit push to sync schema
  */
 
-import { Pool } from 'pg'
+import pg from 'pg'
 import { execSync } from 'child_process'
 import dotenv from 'dotenv'
 
 // Load environment variables
 dotenv.config()
 
+
+const { Pool } = pg
 const DATABASE_URL = process.env.DATABASE_URL
 
 if (!DATABASE_URL) {
@@ -30,7 +32,7 @@ async function enablePgVectorExtension() {
 
     try {
         console.log('📦 Checking for pgvector extension...')
-        
+
         // Check if extension exists
         const checkResult = await pool.query(`
             SELECT EXISTS(
@@ -50,13 +52,13 @@ async function enablePgVectorExtension() {
         const verifyResult = await pool.query(`
             SELECT extversion FROM pg_extension WHERE extname = 'vector';
         `)
-        
+
         if (verifyResult.rows.length > 0) {
             console.log(`✅ pgvector version: ${verifyResult.rows[0].extversion}`)
         }
     } catch (error: any) {
         console.error('❌ Error enabling pgvector extension:', error.message)
-        
+
         if (error.code === '42704') {
             console.error('\n💡 Tip: The pgvector extension may not be installed on your PostgreSQL server.')
             console.error('   For local PostgreSQL, install it with:')
@@ -64,7 +66,7 @@ async function enablePgVectorExtension() {
             console.error('   - Ubuntu/Debian: apt-get install postgresql-XX-pgvector')
             console.error('   - Or compile from source: https://github.com/pgvector/pgvector')
         }
-        
+
         throw error
     } finally {
         await pool.end()
