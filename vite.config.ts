@@ -29,7 +29,7 @@ const config = defineConfig({
     allowedHosts: ['.ngrok-free.app'],
   },
   ssr: {
-    external: ['pdf-parse'],
+    external: ['pg', 'pdf-parse'],
   },
 })
 
