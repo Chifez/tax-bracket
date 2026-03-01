@@ -16,6 +16,7 @@ const config = defineConfig({
   plugins: [
     tailwindcss(),
     devtools(),
+    tanstackStart(),
     nitro(),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
@@ -29,7 +30,7 @@ const config = defineConfig({
     allowedHosts: ['.ngrok-free.app'],
   },
   ssr: {
-    external: ['pdf-parse', 'pg', 'pg-native'],
+    external: ['pdf-parse'],
   },
 })
 

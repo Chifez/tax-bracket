@@ -177,7 +177,7 @@ export async function searchSimilarChunks(
         LIMIT ${limit}
     `)
 
-    return (results as any[]).map((row: any) => ({
+    return results.rows.map((row: any) => ({
         chunkId: row.chunk_id,
         title: row.title,
         content: row.content,
