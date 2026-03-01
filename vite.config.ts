@@ -16,7 +16,6 @@ const config = defineConfig({
   plugins: [
     tailwindcss(),
     devtools(),
-    tanstackStart(),
     nitro(),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
