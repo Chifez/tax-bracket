@@ -1,5 +1,5 @@
-import { db } from './src/db'
-import { messages } from './src/db/schema'
+import { db } from '../src/db'
+import { messages } from '../src/db/schema'
 import { desc } from 'drizzle-orm'
 
 async function checkOrder() {
