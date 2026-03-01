@@ -1,7 +1,4 @@
-import PgBoss from 'pg-boss'
-
-// Singleton instance
-let boss: PgBoss | null = null
+let boss: any | null = null
 
 export const getQueue = async () => {
     if (boss) return boss
@@ -9,9 +6,9 @@ export const getQueue = async () => {
     const databaseUrl = process.env.DATABASE_URL
     if (!databaseUrl) throw new Error('DATABASE_URL is not set')
 
-    boss = new PgBoss(databaseUrl)
+    const PgBoss = (await import('pg-boss')).default
 
-    // Start boss (it handles schema creation)
+    boss = new PgBoss(databaseUrl)
     await boss.start()
 
     console.log('[Queue] PgBoss client connected')
