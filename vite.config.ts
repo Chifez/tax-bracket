@@ -16,7 +16,12 @@ const config = defineConfig({
   plugins: [
     tailwindcss(),
     devtools(),
-    nitro(),
+    nitro({
+      // @ts-ignore - types are incomplete but the config is passed through
+      externals: {
+        external: ['pg', 'pg-native', 'pdf-parse'],
+      },
+    }),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
@@ -29,7 +34,7 @@ const config = defineConfig({
     allowedHosts: ['.ngrok-free.app'],
   },
   ssr: {
-    external: ['pdf-parse', 'pg'],
+    external: ['pdf-parse', 'pg', 'pg-native'],
   },
 })
 
