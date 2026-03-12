@@ -8,16 +8,16 @@
   <p><strong>AI-powered financial assistant for Nigerian tax calculations and bank statement analysis</strong></p>
 
   <p>
-    <a href="https://github.com/taxbracket/taxbracket/stargazers">
-      <img src="https://img.shields.io/github/stars/taxbracket/taxbracket?style=social" alt="GitHub stars"/>
+    <a href="https://github.com/Chifez/tax-bracket/stargazers">
+      <img src="https://img.shields.io/github/stars/tax-bracket/tax-bracket?style=social" alt="GitHub stars"/>
     </a>
-    <a href="https://github.com/taxbracket/taxbracket/network/members">
-      <img src="https://img.shields.io/github/forks/taxbracket/taxbracket?style=social" alt="GitHub forks"/>
+    <a href="https://github.com/Chifez/tax-bracket/network/members">
+      <img src="https://img.shields.io/github/forks/tax-bracket/tax-bracket?style=social" alt="GitHub forks"/>
     </a>
-    <a href="https://github.com/taxbracket/taxbracket/issues">
-      <img src="https://img.shields.io/github/issues/taxbracket/taxbracket" alt="GitHub issues"/>
+    <a href="https://github.com/Chifez/tax-bracket/issues">
+      <img src="https://img.shields.io/github/issues/tax-bracket/tax-bracket" alt="GitHub issues"/>
     </a>
-    <a href="https://github.com/taxbracket/taxbracket/blob/main/LICENSE">
+    <a href="https://github.com/Chifez/tax-bracket/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"/>
     </a>
   </p>
