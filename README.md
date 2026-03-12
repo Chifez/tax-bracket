@@ -9,13 +9,13 @@
 
   <p>
     <a href="https://github.com/Chifez/tax-bracket/stargazers">
-      <img src="https://img.shields.io/github/stars/tax-bracket/tax-bracket?style=social" alt="GitHub stars"/>
+      <img src="https://img.shields.io/github/stars/Chifez/tax-bracket?style=social" alt="GitHub stars"/>
     </a>
     <a href="https://github.com/Chifez/tax-bracket/network/members">
-      <img src="https://img.shields.io/github/forks/tax-bracket/tax-bracket?style=social" alt="GitHub forks"/>
+      <img src="https://img.shields.io/github/forks/Chifez/tax-bracket?style=social" alt="GitHub forks"/>
     </a>
     <a href="https://github.com/Chifez/tax-bracket/issues">
-      <img src="https://img.shields.io/github/issues/tax-bracket/tax-bracket" alt="GitHub issues"/>
+      <img src="https://img.shields.io/github/issues/Chifez/tax-bracket" alt="GitHub issues"/>
     </a>
     <a href="https://github.com/Chifez/tax-bracket/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"/>
